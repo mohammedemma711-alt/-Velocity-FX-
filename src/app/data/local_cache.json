@@ -145,9 +145,9 @@
       "name": "Alex 'PipMaster' Mercer",
       "avatar": "AM",
       "country": "US",
-      "roi": 358.7,
-      "winRate": 76.2,
-      "totalTrades": 543,
+      "roi": 365.42,
+      "winRate": 75.8,
+      "totalTrades": 652,
       "maxDrawdown": 6.8,
       "profitFactor": 2.45,
       "preferredPairs": [
@@ -157,8 +157,8 @@
       ],
       "rank": 1,
       "previousRank": 1,
-      "balance": 45870,
-      "equity": 45870,
+      "balance": 46542,
+      "equity": 46542,
       "history": [
         {
           "day": 1,
@@ -278,7 +278,7 @@
         },
         {
           "day": 30,
-          "equity": 45870
+          "equity": 46542
         }
       ]
     },
@@ -287,9 +287,9 @@
       "name": "Yuki Tanaka",
       "avatar": "YT",
       "country": "JP",
-      "roi": 320.75,
-      "winRate": 66.4,
-      "totalTrades": 482,
+      "roi": 321.93,
+      "winRate": 66.6,
+      "totalTrades": 583,
       "maxDrawdown": 8.2,
       "profitFactor": 2.12,
       "preferredPairs": [
@@ -299,8 +299,8 @@
       ],
       "rank": 2,
       "previousRank": 2,
-      "balance": 42075,
-      "equity": 42075,
+      "balance": 42193,
+      "equity": 42193,
       "history": [
         {
           "day": 1,
@@ -420,291 +420,7 @@
         },
         {
           "day": 30,
-          "equity": 42075
-        }
-      ]
-    },
-    {
-      "id": "trader-3",
-      "name": "Sofia Rodriguez",
-      "avatar": "SR",
-      "country": "BR",
-      "roi": 223.93,
-      "winRate": 72.4,
-      "totalTrades": 406,
-      "maxDrawdown": 9.4,
-      "profitFactor": 1.98,
-      "preferredPairs": [
-        "EUR/USD",
-        "USD/CAD",
-        "GBP/USD"
-      ],
-      "rank": 3,
-      "previousRank": 3,
-      "balance": 32393,
-      "equity": 32393,
-      "history": [
-        {
-          "day": 1,
-          "equity": 10793
-        },
-        {
-          "day": 2,
-          "equity": 12347
-        },
-        {
-          "day": 3,
-          "equity": 13420
-        },
-        {
-          "day": 4,
-          "equity": 14197
-        },
-        {
-          "day": 5,
-          "equity": 14910
-        },
-        {
-          "day": 6,
-          "equity": 15659
-        },
-        {
-          "day": 7,
-          "equity": 16341
-        },
-        {
-          "day": 8,
-          "equity": 16716
-        },
-        {
-          "day": 9,
-          "equity": 16581
-        },
-        {
-          "day": 10,
-          "equity": 15943
-        },
-        {
-          "day": 11,
-          "equity": 15078
-        },
-        {
-          "day": 12,
-          "equity": 14444
-        },
-        {
-          "day": 13,
-          "equity": 14476
-        },
-        {
-          "day": 14,
-          "equity": 15383
-        },
-        {
-          "day": 15,
-          "equity": 17047
-        },
-        {
-          "day": 16,
-          "equity": 19097
-        },
-        {
-          "day": 17,
-          "equity": 21086
-        },
-        {
-          "day": 18,
-          "equity": 22709
-        },
-        {
-          "day": 19,
-          "equity": 23912
-        },
-        {
-          "day": 20,
-          "equity": 24852
-        },
-        {
-          "day": 21,
-          "equity": 25745
-        },
-        {
-          "day": 22,
-          "equity": 26687
-        },
-        {
-          "day": 23,
-          "equity": 27568
-        },
-        {
-          "day": 24,
-          "equity": 28131
-        },
-        {
-          "day": 25,
-          "equity": 28138
-        },
-        {
-          "day": 26,
-          "equity": 27556
-        },
-        {
-          "day": 27,
-          "equity": 26633
-        },
-        {
-          "day": 28,
-          "equity": 25822
-        },
-        {
-          "day": 29,
-          "equity": 25591
-        },
-        {
-          "day": 30,
-          "equity": 32393
-        }
-      ]
-    },
-    {
-      "id": "trader-4",
-      "name": "Liam O'Connor",
-      "avatar": "LO",
-      "country": "IE",
-      "roi": 221.75,
-      "winRate": 65.8,
-      "totalTrades": 389,
-      "maxDrawdown": 7.9,
-      "profitFactor": 1.85,
-      "preferredPairs": [
-        "GBP/USD",
-        "EUR/GBP",
-        "EUR/USD"
-      ],
-      "rank": 4,
-      "previousRank": 4,
-      "balance": 32175,
-      "equity": 32175,
-      "history": [
-        {
-          "day": 1,
-          "equity": 10706
-        },
-        {
-          "day": 2,
-          "equity": 12090
-        },
-        {
-          "day": 3,
-          "equity": 13046
-        },
-        {
-          "day": 4,
-          "equity": 13738
-        },
-        {
-          "day": 5,
-          "equity": 14372
-        },
-        {
-          "day": 6,
-          "equity": 15039
-        },
-        {
-          "day": 7,
-          "equity": 15647
-        },
-        {
-          "day": 8,
-          "equity": 15980
-        },
-        {
-          "day": 9,
-          "equity": 15861
-        },
-        {
-          "day": 10,
-          "equity": 15292
-        },
-        {
-          "day": 11,
-          "equity": 14522
-        },
-        {
-          "day": 12,
-          "equity": 13958
-        },
-        {
-          "day": 13,
-          "equity": 13986
-        },
-        {
-          "day": 14,
-          "equity": 14793
-        },
-        {
-          "day": 15,
-          "equity": 16276
-        },
-        {
-          "day": 16,
-          "equity": 18101
-        },
-        {
-          "day": 17,
-          "equity": 19872
-        },
-        {
-          "day": 18,
-          "equity": 21318
-        },
-        {
-          "day": 19,
-          "equity": 22389
-        },
-        {
-          "day": 20,
-          "equity": 23226
-        },
-        {
-          "day": 21,
-          "equity": 24022
-        },
-        {
-          "day": 22,
-          "equity": 24860
-        },
-        {
-          "day": 23,
-          "equity": 25645
-        },
-        {
-          "day": 24,
-          "equity": 26146
-        },
-        {
-          "day": 25,
-          "equity": 26152
-        },
-        {
-          "day": 26,
-          "equity": 25634
-        },
-        {
-          "day": 27,
-          "equity": 24812
-        },
-        {
-          "day": 28,
-          "equity": 24090
-        },
-        {
-          "day": 29,
-          "equity": 23884
-        },
-        {
-          "day": 30,
-          "equity": 32175
+          "equity": 42193
         }
       ]
     },
@@ -713,9 +429,9 @@
       "name": "Amara Adebayo",
       "avatar": "AA",
       "country": "NG",
-      "roi": 214.02,
-      "winRate": 66.8,
-      "totalTrades": 371,
+      "roi": 256.64,
+      "winRate": 67.6,
+      "totalTrades": 460,
       "maxDrawdown": 11.2,
       "profitFactor": 1.76,
       "preferredPairs": [
@@ -723,10 +439,10 @@
         "GBP/USD",
         "USD/ZAR"
       ],
-      "rank": 5,
-      "previousRank": 5,
-      "balance": 31402,
-      "equity": 31402,
+      "rank": 3,
+      "previousRank": 3,
+      "balance": 35664,
+      "equity": 35664,
       "history": [
         {
           "day": 1,
@@ -846,149 +562,149 @@
         },
         {
           "day": 30,
-          "equity": 31402
+          "equity": 35664
         }
       ]
     },
     {
-      "id": "trader-7",
-      "name": "Chen Wei",
-      "avatar": "CW",
-      "country": "CN",
-      "roi": 207.87,
-      "winRate": 66.1,
-      "totalTrades": 434,
-      "maxDrawdown": 10.1,
-      "profitFactor": 1.59,
+      "id": "trader-3",
+      "name": "Sofia Rodriguez",
+      "avatar": "SR",
+      "country": "BR",
+      "roi": 255.64,
+      "winRate": 72.1,
+      "totalTrades": 494,
+      "maxDrawdown": 9.4,
+      "profitFactor": 1.98,
       "preferredPairs": [
-        "USD/JPY",
-        "AUD/USD",
-        "NZD/USD"
+        "EUR/USD",
+        "USD/CAD",
+        "GBP/USD"
       ],
-      "rank": 6,
-      "previousRank": 7,
-      "balance": 30787,
-      "equity": 30787,
+      "rank": 4,
+      "previousRank": 4,
+      "balance": 35564,
+      "equity": 35564,
       "history": [
         {
           "day": 1,
-          "equity": 10490
+          "equity": 10793
         },
         {
           "day": 2,
-          "equity": 11450
+          "equity": 12347
         },
         {
           "day": 3,
-          "equity": 12112
+          "equity": 13420
         },
         {
           "day": 4,
-          "equity": 12592
+          "equity": 14197
         },
         {
           "day": 5,
-          "equity": 13032
+          "equity": 14910
         },
         {
           "day": 6,
-          "equity": 13495
+          "equity": 15659
         },
         {
           "day": 7,
-          "equity": 13916
+          "equity": 16341
         },
         {
           "day": 8,
-          "equity": 14147
+          "equity": 16716
         },
         {
           "day": 9,
-          "equity": 14064
+          "equity": 16581
         },
         {
           "day": 10,
-          "equity": 13670
+          "equity": 15943
         },
         {
           "day": 11,
-          "equity": 13136
+          "equity": 15078
         },
         {
           "day": 12,
-          "equity": 12745
+          "equity": 14444
         },
         {
           "day": 13,
-          "equity": 12764
+          "equity": 14476
         },
         {
           "day": 14,
-          "equity": 13324
+          "equity": 15383
         },
         {
           "day": 15,
-          "equity": 14352
+          "equity": 17047
         },
         {
           "day": 16,
-          "equity": 15618
+          "equity": 19097
         },
         {
           "day": 17,
-          "equity": 16846
+          "equity": 21086
         },
         {
           "day": 18,
-          "equity": 17849
+          "equity": 22709
         },
         {
           "day": 19,
-          "equity": 18591
+          "equity": 23912
         },
         {
           "day": 20,
-          "equity": 19172
+          "equity": 24852
         },
         {
           "day": 21,
-          "equity": 19724
+          "equity": 25745
         },
         {
           "day": 22,
-          "equity": 20305
+          "equity": 26687
         },
         {
           "day": 23,
-          "equity": 20849
+          "equity": 27568
         },
         {
           "day": 24,
-          "equity": 21197
+          "equity": 28131
         },
         {
           "day": 25,
-          "equity": 21201
+          "equity": 28138
         },
         {
           "day": 26,
-          "equity": 20842
+          "equity": 27556
         },
         {
           "day": 27,
-          "equity": 20272
+          "equity": 26633
         },
         {
           "day": 28,
-          "equity": 19771
+          "equity": 25822
         },
         {
           "day": 29,
-          "equity": 19628
+          "equity": 25591
         },
         {
           "day": 30,
-          "equity": 30787
+          "equity": 35564
         }
       ]
     },
@@ -997,9 +713,9 @@
       "name": "Lucas Dubois",
       "avatar": "LD",
       "country": "FR",
-      "roi": 205.84,
-      "winRate": 61.3,
-      "totalTrades": 341,
+      "roi": 249.64,
+      "winRate": 64.3,
+      "totalTrades": 446,
       "maxDrawdown": 12.4,
       "profitFactor": 1.48,
       "preferredPairs": [
@@ -1007,10 +723,10 @@
         "EUR/JPY",
         "USD/CHF"
       ],
-      "rank": 7,
-      "previousRank": 6,
-      "balance": 30584,
-      "equity": 30584,
+      "rank": 5,
+      "previousRank": 5,
+      "balance": 34964,
+      "equity": 34964,
       "history": [
         {
           "day": 1,
@@ -1130,7 +846,149 @@
         },
         {
           "day": 30,
-          "equity": 30584
+          "equity": 34964
+        }
+      ]
+    },
+    {
+      "id": "trader-4",
+      "name": "Liam O'Connor",
+      "avatar": "LO",
+      "country": "IE",
+      "roi": 220.85,
+      "winRate": 65.9,
+      "totalTrades": 501,
+      "maxDrawdown": 7.9,
+      "profitFactor": 1.85,
+      "preferredPairs": [
+        "GBP/USD",
+        "EUR/GBP",
+        "EUR/USD"
+      ],
+      "rank": 6,
+      "previousRank": 6,
+      "balance": 32085,
+      "equity": 32085,
+      "history": [
+        {
+          "day": 1,
+          "equity": 10706
+        },
+        {
+          "day": 2,
+          "equity": 12090
+        },
+        {
+          "day": 3,
+          "equity": 13046
+        },
+        {
+          "day": 4,
+          "equity": 13738
+        },
+        {
+          "day": 5,
+          "equity": 14372
+        },
+        {
+          "day": 6,
+          "equity": 15039
+        },
+        {
+          "day": 7,
+          "equity": 15647
+        },
+        {
+          "day": 8,
+          "equity": 15980
+        },
+        {
+          "day": 9,
+          "equity": 15861
+        },
+        {
+          "day": 10,
+          "equity": 15292
+        },
+        {
+          "day": 11,
+          "equity": 14522
+        },
+        {
+          "day": 12,
+          "equity": 13958
+        },
+        {
+          "day": 13,
+          "equity": 13986
+        },
+        {
+          "day": 14,
+          "equity": 14793
+        },
+        {
+          "day": 15,
+          "equity": 16276
+        },
+        {
+          "day": 16,
+          "equity": 18101
+        },
+        {
+          "day": 17,
+          "equity": 19872
+        },
+        {
+          "day": 18,
+          "equity": 21318
+        },
+        {
+          "day": 19,
+          "equity": 22389
+        },
+        {
+          "day": 20,
+          "equity": 23226
+        },
+        {
+          "day": 21,
+          "equity": 24022
+        },
+        {
+          "day": 22,
+          "equity": 24860
+        },
+        {
+          "day": 23,
+          "equity": 25645
+        },
+        {
+          "day": 24,
+          "equity": 26146
+        },
+        {
+          "day": 25,
+          "equity": 26152
+        },
+        {
+          "day": 26,
+          "equity": 25634
+        },
+        {
+          "day": 27,
+          "equity": 24812
+        },
+        {
+          "day": 28,
+          "equity": 24090
+        },
+        {
+          "day": 29,
+          "equity": 23884
+        },
+        {
+          "day": 30,
+          "equity": 32085
         }
       ]
     },
@@ -1139,9 +997,9 @@
       "name": "Emma Watson",
       "avatar": "EW",
       "country": "GB",
-      "roi": 182.07,
-      "winRate": 63.6,
-      "totalTrades": 338,
+      "roi": 217.09,
+      "winRate": 62.9,
+      "totalTrades": 442,
       "maxDrawdown": 5.5,
       "profitFactor": 1.68,
       "preferredPairs": [
@@ -1149,10 +1007,10 @@
         "GBP/USD",
         "EUR/GBP"
       ],
-      "rank": 8,
-      "previousRank": 8,
-      "balance": 28207,
-      "equity": 28207,
+      "rank": 7,
+      "previousRank": 7,
+      "balance": 31709,
+      "equity": 31709,
       "history": [
         {
           "day": 1,
@@ -1272,149 +1130,149 @@
         },
         {
           "day": 30,
-          "equity": 28207
+          "equity": 31709
         }
       ]
     },
     {
-      "id": "trader-9",
-      "name": "Hassan Al-Sayed",
-      "avatar": "HA",
-      "country": "AE",
-      "roi": 145.34,
-      "winRate": 64.3,
-      "totalTrades": 297,
-      "maxDrawdown": 8.7,
-      "profitFactor": 1.42,
+      "id": "trader-7",
+      "name": "Chen Wei",
+      "avatar": "CW",
+      "country": "CN",
+      "roi": 216.55,
+      "winRate": 66.2,
+      "totalTrades": 545,
+      "maxDrawdown": 10.1,
+      "profitFactor": 1.59,
       "preferredPairs": [
         "USD/JPY",
-        "USD/CAD",
-        "GBP/USD"
+        "AUD/USD",
+        "NZD/USD"
       ],
-      "rank": 9,
-      "previousRank": 9,
-      "balance": 24534,
-      "equity": 24534,
+      "rank": 8,
+      "previousRank": 8,
+      "balance": 31655,
+      "equity": 31655,
       "history": [
         {
           "day": 1,
-          "equity": 10395
+          "equity": 10490
         },
         {
           "day": 2,
-          "equity": 11169
+          "equity": 11450
         },
         {
           "day": 3,
-          "equity": 11703
+          "equity": 12112
         },
         {
           "day": 4,
-          "equity": 12090
+          "equity": 12592
         },
         {
           "day": 5,
-          "equity": 12445
+          "equity": 13032
         },
         {
           "day": 6,
-          "equity": 12818
+          "equity": 13495
         },
         {
           "day": 7,
-          "equity": 13158
+          "equity": 13916
         },
         {
           "day": 8,
-          "equity": 13344
+          "equity": 14147
         },
         {
           "day": 9,
-          "equity": 13277
+          "equity": 14064
         },
         {
           "day": 10,
-          "equity": 12959
+          "equity": 13670
         },
         {
           "day": 11,
-          "equity": 12529
+          "equity": 13136
         },
         {
           "day": 12,
-          "equity": 12213
+          "equity": 12745
         },
         {
           "day": 13,
-          "equity": 12229
+          "equity": 12764
         },
         {
           "day": 14,
-          "equity": 12680
+          "equity": 13324
         },
         {
           "day": 15,
-          "equity": 13510
+          "equity": 14352
         },
         {
           "day": 16,
-          "equity": 14530
+          "equity": 15618
         },
         {
           "day": 17,
-          "equity": 15521
+          "equity": 16846
         },
         {
           "day": 18,
-          "equity": 16329
+          "equity": 17849
         },
         {
           "day": 19,
-          "equity": 16928
+          "equity": 18591
         },
         {
           "day": 20,
-          "equity": 17396
+          "equity": 19172
         },
         {
           "day": 21,
-          "equity": 17841
+          "equity": 19724
         },
         {
           "day": 22,
-          "equity": 18310
+          "equity": 20305
         },
         {
           "day": 23,
-          "equity": 18749
+          "equity": 20849
         },
         {
           "day": 24,
-          "equity": 19029
+          "equity": 21197
         },
         {
           "day": 25,
-          "equity": 19032
+          "equity": 21201
         },
         {
           "day": 26,
-          "equity": 18743
+          "equity": 20842
         },
         {
           "day": 27,
-          "equity": 18283
+          "equity": 20272
         },
         {
           "day": 28,
-          "equity": 17879
+          "equity": 19771
         },
         {
           "day": 29,
-          "equity": 17764
+          "equity": 19628
         },
         {
           "day": 30,
-          "equity": 24534
+          "equity": 31655
         }
       ]
     },
@@ -1423,9 +1281,9 @@
       "name": "Hans Schmidt",
       "avatar": "HS",
       "country": "DE",
-      "roi": 139.34,
-      "winRate": 54.5,
-      "totalTrades": 323,
+      "roi": 182.28,
+      "winRate": 55.6,
+      "totalTrades": 428,
       "maxDrawdown": 14.1,
       "profitFactor": 1.28,
       "preferredPairs": [
@@ -1433,10 +1291,10 @@
         "USD/CHF",
         "EUR/GBP"
       ],
-      "rank": 10,
-      "previousRank": 10,
-      "balance": 23934,
-      "equity": 23934,
+      "rank": 9,
+      "previousRank": 9,
+      "balance": 28228,
+      "equity": 28228,
       "history": [
         {
           "day": 1,
@@ -1556,7 +1414,149 @@
         },
         {
           "day": 30,
-          "equity": 23934
+          "equity": 28228
+        }
+      ]
+    },
+    {
+      "id": "trader-9",
+      "name": "Hassan Al-Sayed",
+      "avatar": "HA",
+      "country": "AE",
+      "roi": 174.45,
+      "winRate": 64.4,
+      "totalTrades": 418,
+      "maxDrawdown": 8.7,
+      "profitFactor": 1.42,
+      "preferredPairs": [
+        "USD/JPY",
+        "USD/CAD",
+        "GBP/USD"
+      ],
+      "rank": 10,
+      "previousRank": 10,
+      "balance": 27445,
+      "equity": 27445,
+      "history": [
+        {
+          "day": 1,
+          "equity": 10395
+        },
+        {
+          "day": 2,
+          "equity": 11169
+        },
+        {
+          "day": 3,
+          "equity": 11703
+        },
+        {
+          "day": 4,
+          "equity": 12090
+        },
+        {
+          "day": 5,
+          "equity": 12445
+        },
+        {
+          "day": 6,
+          "equity": 12818
+        },
+        {
+          "day": 7,
+          "equity": 13158
+        },
+        {
+          "day": 8,
+          "equity": 13344
+        },
+        {
+          "day": 9,
+          "equity": 13277
+        },
+        {
+          "day": 10,
+          "equity": 12959
+        },
+        {
+          "day": 11,
+          "equity": 12529
+        },
+        {
+          "day": 12,
+          "equity": 12213
+        },
+        {
+          "day": 13,
+          "equity": 12229
+        },
+        {
+          "day": 14,
+          "equity": 12680
+        },
+        {
+          "day": 15,
+          "equity": 13510
+        },
+        {
+          "day": 16,
+          "equity": 14530
+        },
+        {
+          "day": 17,
+          "equity": 15521
+        },
+        {
+          "day": 18,
+          "equity": 16329
+        },
+        {
+          "day": 19,
+          "equity": 16928
+        },
+        {
+          "day": 20,
+          "equity": 17396
+        },
+        {
+          "day": 21,
+          "equity": 17841
+        },
+        {
+          "day": 22,
+          "equity": 18310
+        },
+        {
+          "day": 23,
+          "equity": 18749
+        },
+        {
+          "day": 24,
+          "equity": 19029
+        },
+        {
+          "day": 25,
+          "equity": 19032
+        },
+        {
+          "day": 26,
+          "equity": 18743
+        },
+        {
+          "day": 27,
+          "equity": 18283
+        },
+        {
+          "day": 28,
+          "equity": 17879
+        },
+        {
+          "day": 29,
+          "equity": 17764
+        },
+        {
+          "day": 30,
+          "equity": 27445
         }
       ]
     },
@@ -1565,9 +1565,9 @@
       "name": "Chloe Smith",
       "avatar": "CS",
       "country": "AU",
-      "roi": 106.25,
-      "winRate": 59.8,
-      "totalTrades": 316,
+      "roi": 132.41,
+      "winRate": 59.7,
+      "totalTrades": 427,
       "maxDrawdown": 6.2,
       "profitFactor": 1.35,
       "preferredPairs": [
@@ -1577,8 +1577,8 @@
       ],
       "rank": 11,
       "previousRank": 11,
-      "balance": 20625,
-      "equity": 20625,
+      "balance": 23241,
+      "equity": 23241,
       "history": [
         {
           "day": 1,
@@ -1698,12 +1698,12 @@
         },
         {
           "day": 30,
-          "equity": 20625
+          "equity": 23241
         }
       ]
     }
   ],
   "positions": [],
   "trade_history": [],
-  "updated_at": "2026-08-21T01:34:06.272Z"
+  "updated_at": "2026-08-21T02:09:14.862Z"
 }

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { MetaApiAdapter } from '../lib/metaApiAdapter';
 
@@ -105,6 +106,14 @@ interface AppContextType {
     reason: string
   ) => Promise<boolean>;
   isLoading: boolean;
+  // Supabase Auth extensions
+  session: Session | null;
+  user: User | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  signUp: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signOut: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -124,49 +133,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [traderAccounts, setTraderAccounts] = useState<TraderAccount[]>([]);
   const [trades, setTrades] = useState<DbTrade[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   const isSupabaseConfigured = !!(
     process.env.NEXT_PUBLIC_SUPABASE_URL && 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
-  // Load initial data
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      if (isSupabaseConfigured) {
-        // Load from Supabase
-        const { data: dbComps, error: compErr } = await supabase.from('competitions').select('*');
-        const { data: dbAccs, error: accErr } = await supabase.from('trader_accounts').select('*');
-        const { data: dbTrades, error: tradeErr } = await supabase.from('trades').select('*');
-        const { data: dbParts, error: partErr } = await supabase
-          .from('competition_participants')
-          .select(`
-            *,
-            user:users (name, avatar, country),
-            account:trader_accounts (account_number, broker_server)
-          `);
+  const handleAuthUserSync = useCallback(async (authUser: User) => {
+    const metaName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Trader';
+    const avatar = metaName.slice(0, 2).toUpperCase();
+    const role = (authUser.email?.includes('admin') ? 'admin' : 'user') as 'admin' | 'user';
 
-        if (compErr || accErr || tradeErr || partErr) {
-          console.error('Error fetching from Supabase, loading fallback mock data');
-          throw new Error('Supabase fetch failed');
-        }
+    const profile: UserProfile = {
+      id: authUser.id,
+      name: metaName,
+      email: authUser.email || '',
+      role,
+      avatar,
+      country: 'US',
+      status: 'active'
+    };
 
-        setCompetitions(dbComps || []);
-        setTraderAccounts(dbAccs || []);
-        setTrades(dbTrades || []);
-        setParticipants((dbParts as unknown as Participant[]) || []);
-      } else {
-        // Mock fallback
-        loadMockData();
-      }
-    } catch (err) {
-      console.warn('Fallback: Loading mock data since database failed or is unconfigured', err);
-      loadMockData();
-    } finally {
-      setIsLoading(false);
+    setCurrentUser(profile);
+
+    if (isSupabaseConfigured) {
+      await supabase.from('users').upsert({
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        role: profile.role,
+        avatar: profile.avatar,
+        country: profile.country,
+        status: profile.status
+      });
     }
-  };
+  }, [isSupabaseConfigured]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        handleAuthUserSync(session.user);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        await handleAuthUserSync(session.user);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [isSupabaseConfigured, handleAuthUserSync]);
 
   const loadMockData = () => {
     // Generate mock active data
@@ -290,9 +317,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTrades(mockTrades);
   };
 
+  // Load initial data
+  const loadData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      if (isSupabaseConfigured) {
+        // Load from Supabase
+        const { data: dbComps, error: compErr } = await supabase.from('competitions').select('*');
+        const { data: dbAccs, error: accErr } = await supabase.from('trader_accounts').select('*');
+        const { data: dbTrades, error: tradeErr } = await supabase.from('trades').select('*');
+        const { data: dbParts, error: partErr } = await supabase
+          .from('competition_participants')
+          .select(`
+            *,
+            user:users (name, avatar, country),
+            account:trader_accounts (account_number, broker_server)
+          `);
+
+        if (compErr || accErr || tradeErr || partErr) {
+          console.error('Error fetching from Supabase, loading fallback mock data');
+          throw new Error('Supabase fetch failed');
+        }
+
+        setCompetitions(dbComps || []);
+        setTraderAccounts(dbAccs || []);
+        setTrades(dbTrades || []);
+        setParticipants((dbParts as unknown as Participant[]) || []);
+      } else {
+        // Mock fallback
+        loadMockData();
+      }
+    } catch (err) {
+      console.warn('Fallback: Loading mock data since database failed or is unconfigured', err);
+      loadMockData();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isSupabaseConfigured]);
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
-  }, []);
+  }, [loadData]);
 
   // WebSockets Realtime Sync via Supabase
   useEffect(() => {
@@ -375,7 +441,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const liveState = await MetaApiAdapter.fetchAccountState(acc.account_number, acc.broker_server);
           
           // Check if drawdown breach happened
-          let status = acc.status;
+          let status: 'active' | 'disqualified' = acc.status;
           let disqualification_reason = acc.disqualification_reason;
 
           // Find if this account is in any active competition to test drawdown breach
@@ -419,7 +485,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
 
       // Fetch dynamic live positions/trades for open trades displays
-      const openTrades = trades.filter(t => t.status === 'open');
       const updatedTrades = await Promise.all(
         trades.map(async (t) => {
           if (t.status !== 'open') return t;
@@ -652,6 +717,87 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  const signUp = async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
+    if (!isSupabaseConfigured) {
+      const newId = `usr-${Date.now()}`;
+      const newProfile: UserProfile = {
+        id: newId,
+        name,
+        email,
+        role: 'user',
+        avatar: name.slice(0, 2).toUpperCase(),
+        country: 'US',
+        status: 'active'
+      };
+      setCurrentUser(newProfile);
+      return { success: true };
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name }
+      }
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    if (data.user) {
+      await handleAuthUserSync(data.user);
+    }
+    return { success: true };
+  };
+
+  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    if (!isSupabaseConfigured) {
+      const existing = SEED_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+      if (existing) {
+        setCurrentUser(existing);
+        return { success: true };
+      }
+      const mockProfile: UserProfile = {
+        id: `usr-${Date.now()}`,
+        name: email.split('@')[0],
+        email,
+        role: email.includes('admin') ? 'admin' : 'user',
+        avatar: email.slice(0, 2).toUpperCase(),
+        country: 'US',
+        status: 'active'
+      };
+      setCurrentUser(mockProfile);
+      return { success: true };
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    if (data.user) {
+      await handleAuthUserSync(data.user);
+    }
+    return { success: true };
+  };
+
+  const signOut = async (): Promise<void> => {
+    if (isSupabaseConfigured) {
+      await supabase.auth.signOut();
+    }
+    setSession(null);
+    setUser(null);
+    setCurrentUser(SEED_USERS[0]);
+  };
+
+  const isAuthenticated = !!(session || user || (currentUser && currentUser.id !== 'unauthenticated'));
+  const isAdmin = currentUser.role === 'admin';
+
   return (
     <AppContext.Provider
       value={{
@@ -665,7 +811,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createCompetition,
         joinCompetition,
         disqualifyParticipant,
-        isLoading
+        isLoading,
+        session,
+        user,
+        isAuthenticated,
+        isAdmin,
+        signUp,
+        signIn,
+        signOut
       }}
     >
       {children}

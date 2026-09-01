@@ -161,15 +161,29 @@ export class MetaApiAdapter {
       // Note: Because this execution is asynchronous and runs on a local Windows container,
       // we perform a dynamic import of the client package if it exists, or hit the REST endpoint.
       
+      // @ts-expect-error: metaapi.cloud-sdk is dynamically imported
       const MetaApiClass = await import('metaapi.cloud-sdk').then(m => m.default).catch(() => null);
       if (MetaApiClass) {
-        const metaApi = new (MetaApiClass as any)(this.token);
+        type MetaApiInstance = {
+          metatraderAccountApi: {
+            getAccounts: () => Promise<{ login: string; server: string; id: string }[]>;
+            createAccount: (args: Record<string, unknown>) => Promise<{ waitCreated: () => Promise<void> }>;
+            getAccount: (id: string) => Promise<{
+              connect: () => Promise<{
+                waitSynchronized: () => Promise<void>;
+                getAccountInformation: () => Promise<{ balance: number; equity: number; currency: string }>;
+              }>;
+            }>;
+          };
+        };
+
+        const metaApi = new (MetaApiClass as unknown as new (token: string) => MetaApiInstance)(this.token);
         
         // Find existing instance or create a new provisioning request
         let connectionState;
         try {
           const accounts = await metaApi.metatraderAccountApi.getAccounts();
-          const existing = accounts.find((a: any) => a.login === accountNumber && a.server === brokerServer);
+          const existing = accounts.find((a: { login: string; server: string }) => a.login === accountNumber && a.server === brokerServer);
           
           if (existing) {
             connectionState = existing;
@@ -187,8 +201,8 @@ export class MetaApiAdapter {
           }
 
           // Wait for connection to synchronize
-          await connectionState.waitCreated();
-          const account = await metaApi.metatraderAccountApi.getAccount(connectionState.id);
+          await (connectionState as { waitCreated: () => Promise<void> }).waitCreated();
+          const account = await metaApi.metatraderAccountApi.getAccount((connectionState as { id: string }).id);
           const activeConnection = await account.connect();
           await activeConnection.waitSynchronized();
           
@@ -199,8 +213,9 @@ export class MetaApiAdapter {
             equity: state.equity,
             currency: state.currency
           };
-        } catch (err: any) {
-          return { success: false, error: err.message || 'MetaApi connection failed' };
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : 'MetaApi connection failed';
+          return { success: false, error: errMsg };
         }
       }
 
@@ -210,15 +225,16 @@ export class MetaApiAdapter {
       });
       if (response.ok) {
         // Find and fetch info
-        const accounts = await response.json();
-        const account = accounts.find((a: any) => a.login === accountNumber && a.server === brokerServer);
+        const accounts = await response.json() as { login: string; server: string; balance?: number; equity?: number }[];
+        const account = accounts.find((a) => a.login === accountNumber && a.server === brokerServer);
         if (account) {
           return { success: true, balance: account.balance || 10000, equity: account.equity || 10000 };
         }
       }
       return { success: false, error: 'Could not connect. Library metaapi-client-sdk missing or API failed' };
-    } catch (error: any) {
-      return { success: false, error: error.message || 'Error occurred during MetaApi connection check' };
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : 'Error occurred during MetaApi connection check';
+      return { success: false, error: errMsg };
     }
   }
 

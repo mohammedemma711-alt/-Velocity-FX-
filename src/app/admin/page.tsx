@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useApp, Competition, Participant } from '../context/AppContext';
-import { Trophy, Search, Award, User, RefreshCw, X } from '../components/Icons';
+import { useApp, Participant } from '../context/AppContext';
+import { Trophy, Search, User, X } from '../components/Icons';
+import { Navbar } from '../components/Navbar';
 
 // Convert country code to emoji flag
 const getFlagEmoji = (countryCode: string) => {
@@ -15,8 +16,6 @@ const getFlagEmoji = (countryCode: string) => {
 export default function AdminPage() {
   const {
     currentUser,
-    availableUsers,
-    switchUser,
     competitions,
     participants,
     traderAccounts,
@@ -55,40 +54,27 @@ export default function AdminPage() {
   // Guard view for admin role
   if (currentUser.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6 text-zinc-100 select-none">
-        <div className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-3xl p-8 space-y-6 text-center shadow-2xl">
-          <div className="mx-auto h-16 w-16 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-2xl flex items-center justify-center text-2xl font-black">
-            🔒
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-xl font-black uppercase tracking-wider text-zinc-100">Access Denied</h1>
-            <p className="text-xs text-zinc-500 font-semibold leading-relaxed">
-              The administrator section is restricted to accounts with the <code className="text-amber-400">admin</code> role. Your current role is <code className="text-zinc-400">{currentUser.role}</code>.
-            </p>
-          </div>
-          <div className="border-t border-zinc-800/80 pt-5 space-y-4">
-            <span className="text-[10px] text-zinc-600 uppercase tracking-widest font-black block">Switch Account to Test</span>
-            <div className="flex flex-col gap-2">
-              {availableUsers.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => switchUser(u.id)}
-                  className={`w-full py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-between px-4 ${
-                    u.role === 'admin'
-                      ? 'bg-amber-500 text-zinc-950 border-amber-500 hover:bg-amber-600'
-                      : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:bg-zinc-850 hover:text-zinc-200'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="font-mono text-[10px] bg-zinc-800 text-zinc-300 px-1.5 py-0.5 rounded leading-none">
-                      {u.avatar}
-                    </span>
-                    {u.name}
-                  </span>
-                  <span className="uppercase text-[9px] font-black">{u.role}</span>
-                </button>
-              ))}
+      <div className="min-h-screen bg-zinc-950 flex flex-col font-sans text-zinc-100 select-none">
+        <Navbar currentRoute="admin" />
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-3xl p-8 space-y-6 text-center shadow-2xl">
+            <div className="mx-auto h-16 w-16 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-2xl flex items-center justify-center text-2xl font-black">
+              🔒
             </div>
+            <div className="space-y-2">
+              <h1 className="text-xl font-black uppercase tracking-wider text-zinc-100">Access Denied</h1>
+              <p className="text-xs text-zinc-500 font-semibold leading-relaxed">
+                The administrator section is restricted to accounts with the <code className="text-amber-400">admin</code> role. Your current role is <code className="text-zinc-400">{currentUser.role}</code>.
+              </p>
+            </div>
+              <div className="pt-2">
+                <a
+                  href="/admin/login"
+                  className="block w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-zinc-950 text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md shadow-rose-500/10 text-center"
+                >
+                  Go to Admin Login Page →
+                </a>
+              </div>
           </div>
         </div>
       </div>
@@ -153,35 +139,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950 font-sans text-zinc-100 select-none">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800/80 px-4 md:px-8 py-4 flex flex-col md:flex-row gap-4 items-center justify-between shadow-md">
-        <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-lg shadow-amber-500/10">
-            <span className="text-zinc-950 font-black text-base tracking-tighter">⚡</span>
-          </div>
-          <div>
-            <h1 className="text-base font-black tracking-wider uppercase text-zinc-100 flex items-center gap-1.5 leading-none">
-              Velocity FX <span className="text-[10px] bg-amber-500 text-zinc-950 font-black px-1.5 py-0.5 rounded">ADMIN PORTAL</span>
-            </h1>
-            <span className="text-[10px] text-zinc-500 font-medium">MT5 Accounts & Competition Rules Manager</span>
-          </div>
-        </div>
-
-        {/* Identity selector in Admin */}
-        <div className="flex items-center gap-4 bg-zinc-950/60 p-2 border border-zinc-850 rounded-2xl">
-          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider pl-2">Testing User:</span>
-          <select
-            value={currentUser.id}
-            onChange={(e) => switchUser(e.target.value)}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl px-2.5 py-1 text-xs text-zinc-200 font-bold focus:outline-none"
-          >
-            {availableUsers.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name} ({u.role.toUpperCase()})
-              </option>
-            ))}
-          </select>
-        </div>
-      </header>
+      <Navbar currentRoute="admin" />
 
       {/* Main Grid */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 space-y-6">
@@ -248,7 +206,7 @@ export default function AdminPage() {
                     <label className="text-zinc-500 block uppercase tracking-wider text-[9px]">League Type</label>
                     <select
                       value={compCategory}
-                      onChange={(e) => setCompCategory(e.target.value as any)}
+                      onChange={(e) => setCompCategory(e.target.value as 'daily' | 'monthly' | 'yearly')}
                       className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-200 font-bold focus:outline-none"
                     >
                       <option value="daily">Daily League</option>

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useApp, Participant, Competition } from '../../context/AppContext';
-import { Trophy, Award, Search, X, Clock, Globe } from '../../components/Icons';
-import Link from 'next/link';
+import React, { useState } from 'react';
+import { useApp, Participant } from '../../context/AppContext';
+import { Trophy, Award, Search, X } from '../../components/Icons';
+import { Navbar } from '../../components/Navbar';
 
 // Convert country code to emoji flag
 const getFlagEmoji = (countryCode: string) => {
@@ -14,40 +14,28 @@ const getFlagEmoji = (countryCode: string) => {
 };
 
 export default function LeaderboardPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = React.use(params);
   const {
     currentUser,
-    availableUsers,
-    switchUser,
     competitions,
     participants,
     trades,
     isLoading
   } = useApp();
 
-  const [compId, setCompId] = useState<string | null>(null);
+  const [selectedCompId, setSelectedCompId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [timeframeFilter, setTimeframeFilter] = useState<'all' | 'daily' | 'monthly' | 'yearly'>('all');
   
   // Inspector State
   const [inspectedPart, setInspectedPart] = useState<Participant | null>(null);
 
-  // Resolve Next.js async params
-  useEffect(() => {
-    params.then((p) => {
-      setCompId(p.id);
-    });
-  }, [params]);
+  const compId = selectedCompId || resolvedParams.id;
 
   // Find active competition
   const activeComp = competitions.find((c) => c.id === compId) || competitions[0];
 
-  useEffect(() => {
-    if (activeComp && !compId) {
-      setCompId(activeComp.id);
-    }
-  }, [activeComp, compId]);
-
-  if (isLoading || !compId) {
+  if (isLoading || !activeComp) {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
@@ -104,49 +92,14 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
     // Find first competition matching the chosen timeframe category
     const matchingComp = competitions.find(c => c.category === filter);
     if (matchingComp) {
-      setCompId(matchingComp.id);
+      setSelectedCompId(matchingComp.id);
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950 font-sans text-zinc-100 select-none">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800/80 px-4 md:px-8 py-4 flex flex-col md:flex-row gap-4 items-center justify-between shadow-md">
-        <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-lg shadow-amber-500/10">
-            <span className="text-zinc-950 font-black text-base tracking-tighter">⚡</span>
-          </div>
-          <div>
-            <h1 className="text-base font-black tracking-wider uppercase text-zinc-100 flex items-center gap-1.5 leading-none">
-              Velocity FX <span className="text-[10px] bg-emerald-500/10 text-emerald-400 font-bold px-1.5 py-0.5 rounded border border-emerald-500/20">LIVE BROADCAST</span>
-            </h1>
-            <span className="text-[10px] text-zinc-500 font-medium">Realtime Standings Synced over WebSocket</span>
-          </div>
-        </div>
-
-        {/* Navigation Actions */}
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard"
-            className="px-4 py-2 text-xs font-extrabold uppercase tracking-wider bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 rounded-xl transition-all"
-          >
-            ← Back to Dashboard
-          </Link>
-          <div className="h-8 w-[1px] bg-zinc-800"></div>
-          {/* Active user role switcher to allow quick view toggling */}
-          <select
-            value={currentUser.id}
-            onChange={(e) => switchUser(e.target.value)}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl px-2.5 py-1.5 text-[10px] text-zinc-300 font-bold focus:outline-none"
-          >
-            {availableUsers.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name} ({u.role.toUpperCase()})
-              </option>
-            ))}
-          </select>
-        </div>
-      </header>
+      <Navbar currentRoute="leaderboard" />
 
       {/* Main Broadcast Body */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 space-y-6">

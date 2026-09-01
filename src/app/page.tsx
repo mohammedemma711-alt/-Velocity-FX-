@@ -3,10 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { useApp } from './context/AppContext';
-import { Trophy, Award, Sparkles, User, Globe } from './components/Icons';
+import { Navbar } from './components/Navbar';
+import { Trophy, Sparkles, User, Globe } from './components/Icons';
 
 export default function HomePortal() {
-  const { currentUser, competitions, participants } = useApp();
+  const { competitions, participants } = useApp();
 
   // Find active monthly contest for quick link
   const mainComp = competitions.find(c => c.category === 'monthly') || competitions[0];
@@ -18,29 +19,7 @@ export default function HomePortal() {
       <div className="absolute bottom-[-20%] right-[-20%] h-[70vw] w-[70vw] bg-emerald-500/[0.02] rounded-full filter blur-[120px] pointer-events-none"></div>
 
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 bg-zinc-900/60 backdrop-blur-md border-b border-zinc-900 px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-lg shadow-amber-500/10">
-            <span className="text-zinc-950 font-black text-sm">⚡</span>
-          </div>
-          <span className="text-sm font-black tracking-wider uppercase text-zinc-100">
-            Velocity FX
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider font-mono">
-            Active: {currentUser.name}
-          </span>
-          <div className="h-4 w-[1px] bg-zinc-800"></div>
-          <Link
-            href="/dashboard"
-            className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all"
-          >
-            Open App
-          </Link>
-        </div>
-      </header>
+      <Navbar currentRoute="home" />
 
       {/* Hero Body */}
       <main className="flex-1 flex flex-col justify-center max-w-4xl w-full mx-auto px-6 py-12 md:py-20 space-y-12">
@@ -100,7 +79,7 @@ export default function HomePortal() {
                 </span>
               </h3>
               <p className="text-[11px] text-zinc-500 font-semibold leading-relaxed">
-                Watch WebSocket Standings update in real-time. Inspect other participants' live open positions synced directly from MT5 streams.
+                Watch WebSocket Standings update in real-time. Inspect other participants&apos; live open positions synced directly from MT5 streams.
               </p>
             </div>
             <span className="text-[10px] text-emerald-400 group-hover:text-emerald-300 font-black uppercase tracking-wider flex items-center gap-1">

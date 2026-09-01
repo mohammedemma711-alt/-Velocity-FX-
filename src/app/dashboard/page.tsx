@@ -1,23 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useApp, Competition, Participant } from '../context/AppContext';
-import { Trophy, Award, Search, Globe, Clock } from '../components/Icons';
+import { useApp, Competition } from '../context/AppContext';
+import { Trophy, Globe, X } from '../components/Icons';
+import { Navbar } from '../components/Navbar';
 import Link from 'next/link';
-
-// Convert country code to emoji flag
-const getFlagEmoji = (countryCode: string) => {
-  if (!countryCode || countryCode.length !== 2) return '🌐';
-  return countryCode
-    .toUpperCase()
-    .replace(/./g, (char) => String.fromCodePoint(char.charCodeAt(0) + 127397));
-};
 
 export default function UserDashboard() {
   const {
     currentUser,
-    availableUsers,
-    switchUser,
     competitions,
     participants,
     joinCompetition
@@ -81,57 +72,7 @@ export default function UserDashboard() {
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950 font-sans text-zinc-100 select-none">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800/80 px-4 md:px-8 py-4 flex flex-col md:flex-row gap-4 items-center justify-between shadow-md">
-        <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-lg shadow-amber-500/10">
-            <span className="text-zinc-950 font-black text-base tracking-tighter">⚡</span>
-          </div>
-          <div>
-            <h1 className="text-base font-black tracking-wider uppercase text-zinc-100 flex items-center gap-1.5 leading-none">
-              Velocity FX <span className="text-[10px] bg-amber-500/10 text-amber-400 font-bold px-1.5 py-0.5 rounded border border-amber-500/20">TRADER PORTAL</span>
-            </h1>
-            <span className="text-[10px] text-zinc-500 font-medium">Real-Money & Demo MT5 Competition Standings</span>
-          </div>
-        </div>
-
-        {/* Profile Control Bar */}
-        <div className="flex flex-wrap items-center gap-4 bg-zinc-950/40 p-2.5 border border-zinc-850 rounded-2xl">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-zinc-850 border border-zinc-700 flex items-center justify-center text-xs font-bold text-amber-400 font-mono">
-              {currentUser.avatar}
-            </div>
-            <div>
-              <div className="text-xs font-bold flex items-center gap-1.5">
-                {currentUser.name}
-                <span className="text-sm leading-none" title={currentUser.country}>
-                  {getFlagEmoji(currentUser.country)}
-                </span>
-              </div>
-              <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">
-                Role: {currentUser.role}
-              </span>
-            </div>
-          </div>
-
-          <div className="h-8 w-[1px] bg-zinc-850"></div>
-
-          {/* Tester user switcher */}
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Switch:</span>
-            <select
-              value={currentUser.id}
-              onChange={(e) => switchUser(e.target.value)}
-              className="bg-zinc-900 border border-zinc-800 rounded-xl px-2.5 py-1 text-[10px] text-zinc-200 font-bold focus:outline-none"
-            >
-              {availableUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({u.role.toUpperCase()})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </header>
+      <Navbar currentRoute="dashboard" />
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 space-y-6">

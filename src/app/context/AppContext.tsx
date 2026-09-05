@@ -85,6 +85,13 @@ export interface DbTrade {
   status: 'open' | 'closed' | 'pending';
 }
 
+export interface AuthResult {
+  success: boolean;
+  error?: string;
+  role?: 'admin' | 'user';
+  requiresEmailConfirmation?: boolean;
+}
+
 interface AppContextType {
   currentUser: UserProfile;
   availableUsers: UserProfile[];
@@ -111,8 +118,8 @@ interface AppContextType {
   user: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  signUp: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string, name: string) => Promise<AuthResult>;
+  signIn: (email: string, password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
 }
 
@@ -141,10 +148,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
-  const handleAuthUserSync = useCallback(async (authUser: User) => {
+  const handleAuthUserSync = useCallback(async (authUser: User): Promise<UserProfile> => {
     const metaName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Trader';
     const avatar = metaName.slice(0, 2).toUpperCase();
-    const role = (authUser.email?.includes('admin') ? 'admin' : 'user') as 'admin' | 'user';
+    let role = (authUser.email?.toLowerCase().includes('admin') ? 'admin' : 'user') as 'admin' | 'user';
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data: dbUser } = await supabase.from('users').select('role, country, status, name, avatar').eq('id', authUser.id).maybeSingle();
+        if (dbUser?.role) {
+          role = dbUser.role as 'admin' | 'user';
+        }
+      } catch (e) {
+        console.warn('Error fetching role from public.users', e);
+      }
+    }
 
     const profile: UserProfile = {
       id: authUser.id,
@@ -169,24 +187,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: profile.status
       });
     }
+
+    return profile;
   }, [isSupabaseConfigured]);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) {
-        handleAuthUserSync(session.user);
+      if (session) {
+        if (typeof document !== 'undefined') {
+          document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=604800; SameSite=Lax`;
+          const role = session.user.email?.toLowerCase().includes('admin') ? 'admin' : 'user';
+          document.cookie = `sb-user-role=${role}; path=/; max-age=604800; SameSite=Lax`;
+        }
+        await handleAuthUserSync(session.user);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        if (typeof document !== 'undefined') {
+          document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=604800; SameSite=Lax`;
+          const role = session.user.email?.toLowerCase().includes('admin') ? 'admin' : 'user';
+          document.cookie = `sb-user-role=${role}; path=/; max-age=604800; SameSite=Lax`;
+        }
         await handleAuthUserSync(session.user);
+      } else if (event === 'SIGNED_OUT') {
+        if (typeof document !== 'undefined') {
+          document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax';
+          document.cookie = 'sb-user-role=; path=/; max-age=0; SameSite=Lax';
+        }
       }
     });
 
@@ -717,20 +752,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
-  const signUp = async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
+  const signUp = async (email: string, password: string, name: string): Promise<AuthResult> => {
     if (!isSupabaseConfigured) {
       const newId = `usr-${Date.now()}`;
+      const role = email.toLowerCase().includes('admin') ? 'admin' : 'user';
       const newProfile: UserProfile = {
         id: newId,
         name,
         email,
-        role: 'user',
+        role,
         avatar: name.slice(0, 2).toUpperCase(),
         country: 'US',
         status: 'active'
       };
       setCurrentUser(newProfile);
-      return { success: true };
+      if (typeof document !== 'undefined') {
+        document.cookie = `sb-access-token=mock-token-${Date.now()}; path=/; max-age=604800; SameSite=Lax`;
+        document.cookie = `sb-user-role=${role}; path=/; max-age=604800; SameSite=Lax`;
+      }
+      return { success: true, role, requiresEmailConfirmation: false };
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -745,30 +785,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, error: error.message };
     }
 
-    if (data.user) {
-      await handleAuthUserSync(data.user);
+    let authSession = data.session;
+    let authUser = data.user;
+
+    // If session wasn't immediately returned, attempt sign in in case confirmation is disabled
+    if (!authSession && authUser) {
+      try {
+        const signInRes = await supabase.auth.signInWithPassword({ email, password });
+        if (signInRes.data?.session) {
+          authSession = signInRes.data.session;
+          authUser = signInRes.data.user;
+        }
+      } catch {
+        // Handled below if session is still null
+      }
     }
-    return { success: true };
+
+    if (!authSession) {
+      // Email confirmation is required by Supabase settings before session creation
+      return {
+        success: true,
+        requiresEmailConfirmation: true,
+        role: email.toLowerCase().includes('admin') ? 'admin' : 'user'
+      };
+    }
+
+    setSession(authSession);
+    setUser(authUser);
+    if (typeof document !== 'undefined') {
+      document.cookie = `sb-access-token=${authSession.access_token}; path=/; max-age=604800; SameSite=Lax`;
+    }
+
+    let userRole: 'admin' | 'user' = email.toLowerCase().includes('admin') ? 'admin' : 'user';
+    if (authUser) {
+      const syncedProfile = await handleAuthUserSync(authUser);
+      if (syncedProfile) {
+        userRole = syncedProfile.role;
+      }
+    }
+
+    if (typeof document !== 'undefined') {
+      document.cookie = `sb-user-role=${userRole}; path=/; max-age=604800; SameSite=Lax`;
+    }
+
+    return { success: true, role: userRole, requiresEmailConfirmation: false };
   };
 
-  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const signIn = async (email: string, password: string): Promise<AuthResult> => {
     if (!isSupabaseConfigured) {
       const existing = SEED_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
       if (existing) {
         setCurrentUser(existing);
-        return { success: true };
+        if (typeof document !== 'undefined') {
+          document.cookie = `sb-access-token=mock-token-${Date.now()}; path=/; max-age=604800; SameSite=Lax`;
+          document.cookie = `sb-user-role=${existing.role}; path=/; max-age=604800; SameSite=Lax`;
+        }
+        return { success: true, role: existing.role };
       }
+      const role = email.toLowerCase().includes('admin') ? 'admin' : 'user';
       const mockProfile: UserProfile = {
         id: `usr-${Date.now()}`,
         name: email.split('@')[0],
         email,
-        role: email.includes('admin') ? 'admin' : 'user',
+        role,
         avatar: email.slice(0, 2).toUpperCase(),
         country: 'US',
         status: 'active'
       };
       setCurrentUser(mockProfile);
-      return { success: true };
+      if (typeof document !== 'undefined') {
+        document.cookie = `sb-access-token=mock-token-${Date.now()}; path=/; max-age=604800; SameSite=Lax`;
+        document.cookie = `sb-user-role=${role}; path=/; max-age=604800; SameSite=Lax`;
+      }
+      return { success: true, role };
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -780,15 +869,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, error: error.message };
     }
 
-    if (data.user) {
-      await handleAuthUserSync(data.user);
+    if (data.session) {
+      setSession(data.session);
+      setUser(data.user);
+      if (typeof document !== 'undefined') {
+        document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=604800; SameSite=Lax`;
+      }
     }
-    return { success: true };
+
+    let userRole: 'admin' | 'user' = email.toLowerCase().includes('admin') ? 'admin' : 'user';
+    if (data.user) {
+      const syncedProfile = await handleAuthUserSync(data.user);
+      if (syncedProfile) {
+        userRole = syncedProfile.role;
+      }
+    }
+
+    if (typeof document !== 'undefined') {
+      document.cookie = `sb-user-role=${userRole}; path=/; max-age=604800; SameSite=Lax`;
+    }
+
+    return { success: true, role: userRole };
   };
 
   const signOut = async (): Promise<void> => {
     if (isSupabaseConfigured) {
       await supabase.auth.signOut();
+    }
+    if (typeof document !== 'undefined') {
+      document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax';
+      document.cookie = 'sb-user-role=; path=/; max-age=0; SameSite=Lax';
     }
     setSession(null);
     setUser(null);

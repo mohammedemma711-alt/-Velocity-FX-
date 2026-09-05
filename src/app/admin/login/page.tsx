@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../context/AppContext';
 import { Navbar } from '../../components/Navbar';
 
 function AdminLoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const targetRedirect = searchParams.get('redirect') || '/admin';
 
   const { signIn, currentUser, isAdmin, signOut } = useApp();
 
@@ -17,12 +19,12 @@ function AdminLoginContent() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // If already logged in as admin, redirect to /admin
+  // If already logged in as admin, redirect to targetRedirect (/admin)
   useEffect(() => {
-    if (isAdmin) {
-      router.push('/admin');
+    if (isAdmin || (currentUser.role === 'admin' && currentUser.id !== 'unauthenticated')) {
+      router.push(targetRedirect);
     }
-  }, [isAdmin, router]);
+  }, [isAdmin, currentUser, router, targetRedirect]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,21 +36,22 @@ function AdminLoginContent() {
       const res = await signIn(email, password);
       if (res.success) {
         // Verify role privilege
-        if (currentUser.role !== 'admin' && !email.toLowerCase().includes('admin')) {
+        const role = res.role || currentUser.role;
+        if (role !== 'admin' && !email.toLowerCase().includes('admin')) {
           setErrorMsg('Access Denied: Administrator role required. Your account is registered as a standard trader.');
           await signOut();
+          setIsSubmitting(false);
         } else {
           setSuccessMsg('✓ Admin Authenticated! Redirecting to Admin Console...');
-          setTimeout(() => {
-            router.push('/admin');
-          }, 1200);
+          router.refresh();
+          router.push(targetRedirect);
         }
       } else {
         setErrorMsg(res.error || 'Invalid administrator credentials. Please try again.');
+        setIsSubmitting(false);
       }
     } catch {
       setErrorMsg('An unexpected error occurred during admin authentication.');
-    } finally {
       setIsSubmitting(false);
     }
   };

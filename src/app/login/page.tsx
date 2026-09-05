@@ -22,12 +22,14 @@ function AuthContent() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  const targetRedirect = searchParams.get('redirect') || '/dashboard';
+
   // If already logged in, redirect to dashboard
   useEffect(() => {
     if (session || user) {
-      router.push('/dashboard');
+      router.push(targetRedirect);
     }
-  }, [session, user, router]);
+  }, [session, user, router, targetRedirect]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,27 +57,31 @@ function AuthContent() {
       if (mode === 'signup') {
         const res = await signUp(email, password, fullName);
         if (res.success) {
+          if (res.requiresEmailConfirmation) {
+            setSuccessMsg('✓ Account created! Please check your inbox and verify your email to continue.');
+            setIsSubmitting(false);
+            return;
+          }
           setSuccessMsg('✓ Account created successfully! Redirecting to dashboard...');
-          setTimeout(() => {
-            router.push('/dashboard');
-          }, 1500);
+          router.refresh();
+          router.push(targetRedirect);
         } else {
           setErrorMsg(res.error || 'Failed to sign up. Please try again.');
+          setIsSubmitting(false);
         }
       } else {
         const res = await signIn(email, password);
         if (res.success) {
           setSuccessMsg('✓ Authenticated! Redirecting to dashboard...');
-          setTimeout(() => {
-            router.push('/dashboard');
-          }, 1200);
+          router.refresh();
+          router.push(targetRedirect);
         } else {
           setErrorMsg(res.error || 'Invalid credentials. Please check your email and password.');
+          setIsSubmitting(false);
         }
       }
     } catch {
       setErrorMsg('An unexpected authentication error occurred.');
-    } finally {
       setIsSubmitting(false);
     }
   };

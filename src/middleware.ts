@@ -4,21 +4,20 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Allow access to /admin/login explicitly
-  if (pathname === '/admin/login') {
+  // 1. Allow access to auth login pages explicitly
+  if (pathname === '/admin/login' || pathname === '/login') {
     return NextResponse.next();
   }
 
-  // Check Supabase session token in cookies or auth headers
+  // Check Supabase session token in cookies
   const authCookie = request.cookies.get('sb-access-token') || 
                      request.cookies.get('supabase-auth-token') ||
-                     request.cookies.getAll().find(c => c.name.includes('auth-token'));
+                     request.cookies.getAll().find(c => (c.name.includes('auth-token') || c.name.startsWith('sb-')) && c.value && c.value.trim() !== '');
   
-  const hasAuth = !!authCookie;
+  const hasAuth = !!authCookie && !!authCookie.value && authCookie.value.trim() !== '';
 
   // 2. Protect all /admin/* routes
   if (pathname.startsWith('/admin')) {
-    // If not authenticated via Supabase auth session cookie, redirect to /admin/login
     if (!hasAuth) {
       const loginUrl = new URL('/admin/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
@@ -28,7 +27,6 @@ export function middleware(request: NextRequest) {
 
   // 3. Protect /dashboard route
   if (pathname.startsWith('/dashboard')) {
-    // If unauthenticated, redirect to /login
     if (!hasAuth) {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
@@ -42,3 +40,4 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/admin/:path*', '/dashboard/:path*']
 };
+

@@ -11,7 +11,8 @@ export default function UserDashboard() {
     currentUser,
     competitions,
     participants,
-    joinCompetition
+    joinCompetition,
+    isLoading
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'all' | 'joined'>('all');
@@ -25,6 +26,17 @@ export default function UserDashboard() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <span className="animate-spin text-2xl">⏳</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">Loading Dashboard...</span>
+        </div>
+      </div>
+    );
+  }
 
   // Extract user's active registrations
   const userRegistrations = participants.filter((p) => p.user_id === currentUser.id);

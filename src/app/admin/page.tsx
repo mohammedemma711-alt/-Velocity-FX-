@@ -21,7 +21,9 @@ export default function AdminPage() {
     traderAccounts,
     trades,
     createCompetition,
-    disqualifyParticipant
+    disqualifyParticipant,
+    isLoading,
+    isAdmin
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'competitions' | 'auditor'>('competitions');
@@ -51,8 +53,19 @@ export default function AdminPage() {
   });
   const [formSuccess, setFormSuccess] = useState(false);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <span className="animate-spin text-2xl">⏳</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">Verifying Admin Access...</span>
+        </div>
+      </div>
+    );
+  }
+
   // Guard view for admin role
-  if (currentUser.role !== 'admin') {
+  if (currentUser.role !== 'admin' && !isAdmin) {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col font-sans text-zinc-100 select-none">
         <Navbar currentRoute="admin" />

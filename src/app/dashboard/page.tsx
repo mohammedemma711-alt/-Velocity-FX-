@@ -45,8 +45,18 @@ export default function UserDashboard() {
     e.preventDefault();
     if (!selectedComp) return;
 
+    if (!accountNumber.trim()) {
+      setErrorMsg('Please enter your MT5 account number.');
+      return;
+    }
+
     if (!brokerServer.trim()) {
       setErrorMsg('Please enter a valid MT5 broker server name.');
+      return;
+    }
+
+    if (!investorPassword.trim()) {
+      setErrorMsg('Please enter your MT5 investor password (read-only).');
       return;
     }
 

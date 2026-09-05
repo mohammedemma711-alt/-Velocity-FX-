@@ -634,6 +634,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user_id: currentUser.id,
       account_number: accountNumber,
       broker_server: brokerServer,
+      investor_password: investorPassword,
       platform: 'MT5',
       initial_equity: baselineEquity,
       current_equity: baselineEquity,

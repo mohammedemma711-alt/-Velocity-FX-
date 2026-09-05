@@ -112,6 +112,11 @@ interface AppContextType {
     accountId: string,
     reason: string
   ) => Promise<boolean>;
+  syncAccount: (
+    accountId: string,
+    accountNumber: string,
+    brokerServer: string
+  ) => Promise<{ success: boolean; error?: string }>;
   isLoading: boolean;
   // Supabase Auth extensions
   session: Session | null;
@@ -753,6 +758,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  const syncAccount = async (
+    accountId: string,
+    accountNumber: string,
+    brokerServer: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await fetch('/api/mt5/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sync_account',
+          accountId,
+          accountNumber,
+          brokerServer
+        })
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        return { success: false, error: data.error || 'Failed to sync MT5 account' };
+      }
+
+      await loadData();
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Network error occurred during MT5 sync.' };
+    }
+  };
+
   const signUp = async (email: string, password: string, name: string): Promise<AuthResult> => {
     if (!isSupabaseConfigured) {
       const newId = `usr-${Date.now()}`;
@@ -922,6 +956,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createCompetition,
         joinCompetition,
         disqualifyParticipant,
+        syncAccount,
         isLoading,
         session,
         user,

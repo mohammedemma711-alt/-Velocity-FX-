@@ -12,6 +12,7 @@ export default function UserDashboard() {
     competitions,
     participants,
     joinCompetition,
+    syncAccount,
     isLoading
   } = useApp();
 
@@ -24,6 +25,8 @@ export default function UserDashboard() {
   const [investorPassword, setInvestorPassword] = useState('');
   
   const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState('');
+  const [syncingAccountId, setSyncingAccountId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -63,6 +66,11 @@ export default function UserDashboard() {
     setErrorMsg('');
     setSuccessMsg('');
     setIsVerifying(true);
+    setVerificationStatus('Validating broker server & credentials...');
+
+    const t1 = setTimeout(() => setVerificationStatus('Deploying MetaApi MT5 read-only gateway...'), 1200);
+    const t2 = setTimeout(() => setVerificationStatus('Connecting & authenticating investor password...'), 3500);
+    const t3 = setTimeout(() => setVerificationStatus('Syncing live equity & open positions...'), 6000);
 
     try {
       const res = await joinCompetition(
@@ -72,6 +80,10 @@ export default function UserDashboard() {
         investorPassword
       );
 
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+
       if (res.success) {
         setSuccessMsg(`✓ Successfully registered! Connected to MT5 Account #${accountNumber} successfully.`);
         setTimeout(() => {
@@ -79,11 +91,15 @@ export default function UserDashboard() {
           setAccountNumber('');
           setInvestorPassword('');
           setSuccessMsg('');
+          setVerificationStatus('');
         }, 2200);
       } else {
         setErrorMsg(res.error || 'Connection failed. Please check credentials and server name.');
       }
     } catch {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
       setErrorMsg('An unexpected error occurred during MT5 verification.');
     } finally {
       setIsVerifying(false);
@@ -211,8 +227,32 @@ export default function UserDashboard() {
                             href={`/leaderboard/${comp.id}`}
                             className="flex-1 text-center py-2.5 bg-zinc-850 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all"
                           >
-                            Standings Leaderboard
+                            Standings
                           </Link>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!reg.trader_account_id) return;
+                              setSyncingAccountId(reg.trader_account_id);
+                              await syncAccount(
+                                reg.trader_account_id,
+                                reg.account?.account_number || '',
+                                reg.account?.broker_server || ''
+                              );
+                              setSyncingAccountId(null);
+                            }}
+                            disabled={syncingAccountId === reg.trader_account_id}
+                            className="px-3.5 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer outline-none disabled:opacity-50"
+                            title="Refresh live MT5 equity & open positions"
+                          >
+                            {syncingAccountId === reg.trader_account_id ? (
+                              <>
+                                <span className="animate-spin text-xs">⏳</span> Syncing...
+                              </>
+                            ) : (
+                              '↻ Sync MT5'
+                            )}
+                          </button>
                         </div>
                       </div>
                     ) : (
@@ -344,7 +384,7 @@ export default function UserDashboard() {
                 >
                   {isVerifying ? (
                     <>
-                      <span className="animate-spin text-xs">⏳</span> Verifying...
+                      <span className="animate-spin text-xs">⏳</span> {verificationStatus || 'Verifying MT5...'}
                     </>
                   ) : (
                     'Verify & Join'

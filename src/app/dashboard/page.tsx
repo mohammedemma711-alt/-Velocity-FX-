@@ -45,6 +45,11 @@ export default function UserDashboard() {
     e.preventDefault();
     if (!selectedComp) return;
 
+    if (!brokerServer.trim()) {
+      setErrorMsg('Please enter a valid MT5 broker server name.');
+      return;
+    }
+
     setErrorMsg('');
     setSuccessMsg('');
     setIsVerifying(true);
@@ -264,17 +269,25 @@ export default function UserDashboard() {
 
               <div className="space-y-1.5">
                 <label className="text-zinc-500 block uppercase tracking-wider text-[9px]">MT5 Broker Server Name</label>
-                <select
+                <input
+                  type="text"
+                  required
+                  list="broker-servers"
+                  placeholder="e.g. ICMarketsSC-Server, Pepperstone-Demo, XM-Global-Demo"
                   value={brokerServer}
                   onChange={(e) => setBrokerServer(e.target.value)}
-                  className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-200 font-bold focus:outline-none"
-                >
-                  <option value="ICMarketsSC-Server">ICMarketsSC-Server</option>
-                  <option value="Pepperstone-Demo">Pepperstone-Demo</option>
-                  <option value="FTMO-Server">FTMO-Server</option>
-                  <option value="XM-Global-Demo">XM-Global-Demo</option>
-                  <option value="Darwinex-Live">Darwinex-Live</option>
-                </select>
+                  className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-100 font-bold focus:outline-none focus:border-zinc-700"
+                />
+                <datalist id="broker-servers">
+                  <option value="ICMarketsSC-Server" />
+                  <option value="Pepperstone-Demo" />
+                  <option value="FTMO-Server" />
+                  <option value="XM-Global-Demo" />
+                  <option value="Darwinex-Live" />
+                  <option value="Exness-Real" />
+                  <option value="RawTrading-Live" />
+                  <option value="RoboForex-Pro" />
+                </datalist>
               </div>
 
               <div className="space-y-1.5">

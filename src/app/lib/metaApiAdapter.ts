@@ -21,6 +21,7 @@ export interface LiveAccountState {
   equity: number;
   floatingPnL: number;
   maxDrawdown: number;
+  initialBalance: number;
 }
 
 export interface LiveTrade {
@@ -124,7 +125,16 @@ function getSimulatedAccount(accountNumber: string, brokerServer: string) {
 }
 
 export class MetaApiAdapter {
-  private static token = process.env.METAAPI_TOKEN || '';
+  private static get token(): string {
+    return process.env.METAAPI_TOKEN || '';
+  }
+  private static provisioningUrl = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
+
+  private static getClientApiUrl(region?: string): string {
+    return region
+      ? `https://mt-client-api-v1.${region}.agiliumtrade.ai`
+      : 'https://mt-client-api-v1.agiliumtrade.ai';
+  }
 
   /**
    * Validate broker server format before sending requests
@@ -192,34 +202,37 @@ export class MetaApiAdapter {
     // 3. Live MetaApi Connection Flow
     try {
       // Find existing MetaApi account or provision new one
-      const provisioningUrl = 'https://mt-provisioning-api-v1.metaapi.cloud/users/current/accounts';
-      const listRes = await fetch(provisioningUrl, {
+      const listRes = await fetch(`${this.provisioningUrl}/users/current/accounts`, {
         headers: { 'auth-token': this.token }
       });
 
       let metaAccountId: string | null = null;
       let accountState = 'DRAFT';
+      let accountRegion = 'london';
 
       if (listRes.ok) {
         const accounts = (await listRes.json()) as Array<{
-          id: string;
-          login: string;
+          _id?: string;
+          id?: string;
+          login: string | number;
           server: string;
           state: string;
+          region?: string;
           connectionStatus?: string;
         }>;
         const existing = accounts.find(
-          a => a.login === accountNumber && a.server.toLowerCase() === brokerServer.toLowerCase()
+          a => String(a.login) === String(accountNumber) && a.server?.toLowerCase() === brokerServer.toLowerCase()
         );
         if (existing) {
-          metaAccountId = existing.id;
+          metaAccountId = existing.id || existing._id || null;
           accountState = existing.state;
+          accountRegion = existing.region || 'london';
         }
       }
 
       if (!metaAccountId) {
         // Create new account resource in MetaApi (investorMode: true / manualTrades: false)
-        const createRes = await fetch(provisioningUrl, {
+        const createRes = await fetch(`${this.provisioningUrl}/users/current/accounts`, {
           method: 'POST',
           headers: {
             'auth-token': this.token,
@@ -232,6 +245,7 @@ export class MetaApiAdapter {
             password: investorPassword,
             server: brokerServer,
             platform: 'mt5',
+            magic: 1000,
             application: 'metaapi',
             manualTrades: false
           })
@@ -255,14 +269,15 @@ export class MetaApiAdapter {
           return { success: false, error: errMsg };
         }
 
-        const created = (await createRes.json()) as { id: string; state: string };
-        metaAccountId = created.id;
+        const created = (await createRes.json()) as { id?: string; _id?: string; state: string; region?: string };
+        metaAccountId = created.id || created._id || null;
         accountState = created.state;
+        accountRegion = created.region || 'london';
       }
 
       // If account is not deployed, trigger deployment
-      if (accountState !== 'DEPLOYED') {
-        await fetch(`https://mt-provisioning-api-v1.metaapi.cloud/users/current/accounts/${metaAccountId}/deploy`, {
+      if (accountState !== 'DEPLOYED' && metaAccountId) {
+        await fetch(`${this.provisioningUrl}/users/current/accounts/${metaAccountId}/deploy`, {
           method: 'POST',
           headers: { 'auth-token': this.token }
         });
@@ -275,15 +290,17 @@ export class MetaApiAdapter {
       for (let i = 0; i < maxRetries; i++) {
         await new Promise(r => setTimeout(r, 2000));
         const statusRes = await fetch(
-          `https://mt-provisioning-api-v1.metaapi.cloud/users/current/accounts/${metaAccountId}`,
+          `${this.provisioningUrl}/users/current/accounts/${metaAccountId}`,
           { headers: { 'auth-token': this.token } }
         );
 
         if (statusRes.ok) {
           const statusData = (await statusRes.json()) as {
             state: string;
+            region?: string;
             connectionStatus?: string;
           };
+          if (statusData.region) accountRegion = statusData.region;
           if (statusData.state === 'DEPLOYED' && statusData.connectionStatus === 'CONNECTED') {
             isConnected = true;
             break;
@@ -299,8 +316,8 @@ export class MetaApiAdapter {
       }
 
       // Fetch live account information
-      const clientUrl = `https://mt-client-api-v1.metaapi.cloud/users/current/accounts/${metaAccountId}/account-information`;
-      const infoRes = await fetch(clientUrl, {
+      const clientBase = this.getClientApiUrl(accountRegion);
+      const infoRes = await fetch(`${clientBase}/users/current/accounts/${metaAccountId}/account-information`, {
         headers: { 'auth-token': this.token }
       });
 
@@ -310,9 +327,31 @@ export class MetaApiAdapter {
           equity: number;
           currency: string;
         };
+
+        // Fetch earliest deposit deal from history to determine initial baseline balance
+        let initialDeposit = info.balance || 0;
+        try {
+          const dealsRes = await fetch(
+            `${clientBase}/users/current/accounts/${metaAccountId}/history-deals/time/2020-01-01T00:00:00.000Z/2030-01-01T00:00:00.000Z`,
+            { headers: { 'auth-token': this.token } }
+          );
+          if (dealsRes.ok) {
+            const dealsData = await dealsRes.json();
+            const deals = Array.isArray(dealsData) ? dealsData : (dealsData.deals || []);
+            const balanceDeals = deals.filter(
+              (d: { type: string; profit: number }) => d.type === 'DEAL_TYPE_BALANCE' && d.profit > 0
+            );
+            if (balanceDeals.length > 0) {
+              initialDeposit = balanceDeals[0].profit;
+            }
+          }
+        } catch {
+          // Fall back to info.balance
+        }
+
         return {
           success: true,
-          balance: info.balance,
+          balance: initialDeposit > 0 ? initialDeposit : info.balance,
           equity: info.equity,
           currency: info.currency || 'USD'
         };
@@ -320,7 +359,7 @@ export class MetaApiAdapter {
 
       return {
         success: false,
-        error: 'Failed to authenticate with MT5 server. Please verify your investor password.'
+        error: 'Failed to retrieve MT5 account information. Please verify your investor credentials.'
       };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'MetaApi connection failed';
@@ -342,27 +381,37 @@ export class MetaApiAdapter {
         balance: sim.initialEquity,
         equity: sim.currentEquity,
         floatingPnL: sim.floatingPnL,
-        maxDrawdown: sim.maxDrawdown
+        maxDrawdown: sim.maxDrawdown,
+        initialBalance: sim.initialEquity
       };
     }
 
     try {
-      // 1. Locate MetaApi account ID
-      const listRes = await fetch('https://mt-provisioning-api-v1.metaapi.cloud/users/current/accounts', {
+      // 1. Locate MetaApi account ID and region
+      const listRes = await fetch(`${this.provisioningUrl}/users/current/accounts`, {
         headers: { 'auth-token': this.token }
       });
 
       if (!listRes.ok) throw new Error('Failed to fetch MetaApi accounts');
-      const accounts = (await listRes.json()) as Array<{ id: string; login: string; server: string }>;
+      const accounts = (await listRes.json()) as Array<{
+        _id?: string;
+        id?: string;
+        login: string | number;
+        server: string;
+        region?: string;
+      }>;
       const target = accounts.find(
-        a => a.login === accountNumber && a.server.toLowerCase() === brokerServer.toLowerCase()
+        a => String(a.login) === String(accountNumber) && a.server?.toLowerCase() === brokerServer.toLowerCase()
       );
 
       if (!target) throw new Error(`Account #${accountNumber} not found in MetaApi`);
+      const targetId = target.id || target._id;
+      const region = target.region || 'london';
+      const clientBase = this.getClientApiUrl(region);
 
       // 2. Fetch Account Information (Balance, Equity)
       const infoRes = await fetch(
-        `https://mt-client-api-v1.metaapi.cloud/users/current/accounts/${target.id}/account-information`,
+        `${clientBase}/users/current/accounts/${targetId}/account-information`,
         { headers: { 'auth-token': this.token } }
       );
       if (!infoRes.ok) throw new Error('Failed to fetch live account info');
@@ -370,7 +419,7 @@ export class MetaApiAdapter {
 
       // 3. Fetch Open Positions separately to sum Floating PnL
       const posRes = await fetch(
-        `https://mt-client-api-v1.metaapi.cloud/users/current/accounts/${target.id}/positions`,
+        `${clientBase}/users/current/accounts/${targetId}/positions`,
         { headers: { 'auth-token': this.token } }
       );
       let floatingPnL = 0;
@@ -381,7 +430,28 @@ export class MetaApiAdapter {
         floatingPnL = info.equity - info.balance;
       }
 
-      const initialEquity = info.balance || 10000;
+      // 4. Fetch History Deals to accurately determine original initial deposit balance
+      let initialDeposit = info.balance || 0;
+      try {
+        const dealsRes = await fetch(
+          `${clientBase}/users/current/accounts/${targetId}/history-deals/time/2020-01-01T00:00:00.000Z/2030-01-01T00:00:00.000Z`,
+          { headers: { 'auth-token': this.token } }
+        );
+        if (dealsRes.ok) {
+          const dealsData = await dealsRes.json();
+          const deals = Array.isArray(dealsData) ? dealsData : (dealsData.deals || []);
+          const balanceDeals = deals.filter(
+            (d: { type: string; profit: number }) => d.type === 'DEAL_TYPE_BALANCE' && d.profit > 0
+          );
+          if (balanceDeals.length > 0) {
+            initialDeposit = balanceDeals[0].profit;
+          }
+        }
+      } catch {
+        // Fall back to info.balance
+      }
+
+      const initialEquity = initialDeposit > 0 ? initialDeposit : (info.balance || 10000);
       const drawdown = initialEquity > 0 && info.equity < initialEquity
         ? Number((((initialEquity - info.equity) / initialEquity) * 100).toFixed(2))
         : 0;
@@ -390,7 +460,8 @@ export class MetaApiAdapter {
         balance: info.balance,
         equity: info.equity,
         floatingPnL: Number(floatingPnL.toFixed(2)),
-        maxDrawdown: drawdown
+        maxDrawdown: drawdown,
+        initialBalance: initialEquity
       };
     } catch {
       const sim = getSimulatedAccount(accountNumber, brokerServer);
@@ -398,7 +469,8 @@ export class MetaApiAdapter {
         balance: sim.initialEquity,
         equity: sim.currentEquity,
         floatingPnL: sim.floatingPnL,
-        maxDrawdown: sim.maxDrawdown
+        maxDrawdown: sim.maxDrawdown,
+        initialBalance: sim.initialEquity
       };
     }
   }
@@ -416,19 +488,29 @@ export class MetaApiAdapter {
     }
 
     try {
-      const listRes = await fetch('https://mt-provisioning-api-v1.metaapi.cloud/users/current/accounts', {
+      const listRes = await fetch(`${this.provisioningUrl}/users/current/accounts`, {
         headers: { 'auth-token': this.token }
       });
       if (!listRes.ok) return [];
-      const accounts = (await listRes.json()) as Array<{ id: string; login: string; server: string }>;
+      const accounts = (await listRes.json()) as Array<{
+        _id?: string;
+        id?: string;
+        login: string | number;
+        server: string;
+        region?: string;
+      }>;
       const target = accounts.find(
-        a => a.login === accountNumber && a.server.toLowerCase() === brokerServer.toLowerCase()
+        a => String(a.login) === String(accountNumber) && a.server?.toLowerCase() === brokerServer.toLowerCase()
       );
       if (!target) return [];
 
+      const targetId = target.id || target._id;
+      const region = target.region || 'london';
+      const clientBase = this.getClientApiUrl(region);
+
       // Fetch open positions
       const posRes = await fetch(
-        `https://mt-client-api-v1.metaapi.cloud/users/current/accounts/${target.id}/positions`,
+        `${clientBase}/users/current/accounts/${targetId}/positions`,
         { headers: { 'auth-token': this.token } }
       );
 

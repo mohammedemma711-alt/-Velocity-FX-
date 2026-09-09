@@ -556,7 +556,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     investorPassword: string
   ): Promise<{ success: boolean; error?: string }> => {
     // 1. Verify MT5 Account using server sync endpoint (with METAAPI_TOKEN) or local adapter
-    let baselineEquity = 10000;
+    let baselineEquity = 0;
     if (isSupabaseConfigured) {
       const verRes = await fetch('/api/mt5/sync', {
         method: 'POST',
@@ -572,13 +572,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!verData.success) {
         return { success: false, error: verData.error || 'Failed to authenticate MT5 credentials' };
       }
-      baselineEquity = verData.equity || verData.balance || 10000;
+      baselineEquity = Number(verData.balance ?? verData.equity ?? 0);
     } else {
       const ver = await MetaApiAdapter.verifyConnection(accountNumber, brokerServer, investorPassword);
       if (!ver.success) {
         return { success: false, error: ver.error || 'Failed to authenticate MT5 credentials' };
       }
-      baselineEquity = ver.equity || ver.balance || 0;
+      baselineEquity = Number(ver.balance ?? ver.equity ?? 0);
+    }
+
+    if (baselineEquity <= 0) {
+      return { success: false, error: 'Unable to retrieve a valid starting balance from the connected MT5 account.' };
     }
 
     // 2. Load competition min equity rule
@@ -769,8 +773,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setParticipants(prev =>
           prev.map(p => {
             if (p.trader_account_id === accountId) {
-              const startBal = p.starting_balance > 0 ? p.starting_balance : 10000;
-              const roi = Number((((data.state.equity - startBal) / startBal) * 100).toFixed(2));
+              const startBal = Number(p.starting_balance) > 0 ? Number(p.starting_balance) : Number(data.state?.balance || 0);
+              const roi = startBal > 0 ? Number((((data.state.equity - startBal) / startBal) * 100).toFixed(2)) : 0;
               return {
                 ...p,
                 current_equity: data.state.equity,
@@ -801,8 +805,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         if (userParts) {
           for (const up of userParts) {
-            const sBal = Number(up.starting_balance) || 10000;
-            const rRoi = Number((((data.state.equity - sBal) / sBal) * 100).toFixed(2));
+            const sBal = Number(up.starting_balance) > 0 ? Number(up.starting_balance) : Number(data.state?.balance || 0);
+            const rRoi = sBal > 0 ? Number((((data.state.equity - sBal) / sBal) * 100).toFixed(2)) : 0;
             await supabase
               .from('competition_participants')
               .update({

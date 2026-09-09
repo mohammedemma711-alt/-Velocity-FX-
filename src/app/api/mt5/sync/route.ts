@@ -132,8 +132,8 @@ export async function POST(request: Request) {
 
         if (participants && participants.length > 0) {
           for (const p of participants) {
-            const startBal = Number(p.starting_balance) || 10000;
-            const pnlPct = Number((((liveState.equity - startBal) / startBal) * 100).toFixed(2));
+            const startBal = Number(p.starting_balance) > 0 ? Number(p.starting_balance) : Number(liveState.balance || 0);
+            const pnlPct = startBal > 0 ? Number((((liveState.equity - startBal) / startBal) * 100).toFixed(2)) : 0;
             
             await dbClient
               .from('competition_participants')
@@ -189,8 +189,8 @@ export async function POST(request: Request) {
 
               if (parts) {
                 for (const p of parts) {
-                  const startBal = Number(p.starting_balance) || 10000;
-                  const pnlPct = Number((((state.equity - startBal) / startBal) * 100).toFixed(2));
+                  const startBal = Number(p.starting_balance) > 0 ? Number(p.starting_balance) : Number(state.balance || 0);
+                  const pnlPct = startBal > 0 ? Number((((state.equity - startBal) / startBal) * 100).toFixed(2)) : 0;
                   await dbClient
                     .from('competition_participants')
                     .update({ current_equity: state.equity, pnl_pct: pnlPct })
@@ -266,8 +266,8 @@ export async function GET(request: Request) {
 
             if (parts) {
               for (const p of parts) {
-                const startBal = Number(p.starting_balance) || 10000;
-                const pnlPct = Number((((state.equity - startBal) / startBal) * 100).toFixed(2));
+                const startBal = Number(p.starting_balance) > 0 ? Number(p.starting_balance) : Number(state.balance || 0);
+                const pnlPct = startBal > 0 ? Number((((state.equity - startBal) / startBal) * 100).toFixed(2)) : 0;
                 await dbClient
                   .from('competition_participants')
                   .update({ current_equity: state.equity, pnl_pct: pnlPct })

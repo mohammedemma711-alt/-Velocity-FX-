@@ -81,11 +81,14 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
     // Ensure account, user, equity & pnl_pct read accurately from synced records
     .map((p) => {
       const account = p.account || traderAccounts?.find((a) => a.id === p.trader_account_id);
-      const liveEquity = p.current_equity !== undefined ? p.current_equity : (account?.current_equity ?? p.starting_balance);
-      const startBal = p.starting_balance > 0 ? p.starting_balance : (account?.initial_equity ?? 10000);
-      const livePnlPct = p.pnl_pct !== undefined ? p.pnl_pct : Number((((liveEquity - startBal) / startBal) * 100).toFixed(2));
+      const startBal = Number(p.starting_balance) > 0 ? Number(p.starting_balance) : (Number(account?.initial_equity) > 0 ? Number(account?.initial_equity) : 0);
+      const liveEquity = p.current_equity !== undefined ? Number(p.current_equity) : (account?.current_equity !== undefined ? Number(account.current_equity) : startBal);
+      const livePnlPct = startBal > 0
+        ? Number((((liveEquity - startBal) / startBal) * 100).toFixed(2))
+        : (p.pnl_pct !== undefined ? Number(p.pnl_pct) : 0);
       return {
         ...p,
+        starting_balance: startBal,
         account: account || p.account,
         current_equity: liveEquity,
         pnl_pct: livePnlPct

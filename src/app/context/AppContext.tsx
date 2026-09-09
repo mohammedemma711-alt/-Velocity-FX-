@@ -569,11 +569,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
       });
       const verData = await verRes.json();
-      if (!verData.success) {
-        return { success: false, error: verData.error || 'Failed to authenticate MT5 credentials' };
+      if (!verData.success || verData.isMock) {
+        return {
+          success: false,
+          error: verData.error || 'Could not verify MT5 account — please check your credentials and try again.'
+        };
       }
       baselineEquity = Number(verData.balance ?? verData.equity ?? 0);
     } else {
+      // Demo / offline mode without database connection
       const ver = await MetaApiAdapter.verifyConnection(accountNumber, brokerServer, investorPassword);
       if (!ver.success) {
         return { success: false, error: ver.error || 'Failed to authenticate MT5 credentials' };
@@ -582,7 +586,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (baselineEquity <= 0) {
-      return { success: false, error: 'Unable to retrieve a valid starting balance from the connected MT5 account.' };
+      return { success: false, error: 'Could not verify MT5 account — please check your credentials and try again.' };
     }
 
     // 2. Load competition min equity rule

@@ -14,6 +14,7 @@ export interface VerificationResult {
   balance?: number;
   equity?: number;
   currency?: string;
+  isMock?: boolean;
 }
 
 export interface LiveAccountState {
@@ -195,7 +196,8 @@ export class MetaApiAdapter {
         success: true,
         balance: simAcc.initialEquity,
         equity: simAcc.currentEquity,
-        currency: 'USD'
+        currency: 'USD',
+        isMock: true
       };
     }
 

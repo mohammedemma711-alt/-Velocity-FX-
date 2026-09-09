@@ -71,14 +71,24 @@ export async function POST(request: Request) {
         );
       }
 
+      if (!process.env.METAAPI_TOKEN) {
+        return NextResponse.json(
+          { success: false, error: 'Could not verify MT5 account — live connection is unavailable. Please check your credentials and try again.' },
+          { status: 503 }
+        );
+      }
+
       const result = await MetaApiAdapter.verifyConnection(
         accountNumber.trim(),
         brokerServer.trim(),
         investorPassword.trim()
       );
 
-      if (!result.success) {
-        return NextResponse.json({ success: false, error: result.error }, { status: 422 });
+      if (!result.success || result.isMock) {
+        return NextResponse.json(
+          { success: false, error: result.error || 'Could not verify MT5 account — please check your credentials and try again.' },
+          { status: 422 }
+        );
       }
 
       return NextResponse.json({

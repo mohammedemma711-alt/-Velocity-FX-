@@ -20,7 +20,8 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
     competitions,
     participants,
     trades,
-    isLoading
+    isLoading,
+    isSupabaseConfigured
   } = useApp();
 
   const [selectedCompId, setSelectedCompId] = useState<string | null>(null);
@@ -46,9 +47,48 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  // Get participants of current active competition
+  // Get participants of current active competition with verified, connected MT5 accounts
   const currentParticipants = participants
-    .filter((p) => p.competition_id === activeComp.id)
+    .filter((p) => {
+      // 1. Must belong to the active competition
+      if (p.competition_id !== activeComp.id) return false;
+
+      // 2. Must have a genuine linked MT5 account
+      if (!p.trader_account_id || !p.account || !p.account.account_number || !p.account.broker_server) {
+        return false;
+      }
+
+      // 3. Must be active or disqualified
+      if (p.status !== 'active' && p.status !== 'disqualified') {
+        return false;
+      }
+
+      // 4. In live Supabase database mode, filter out leftover seed/test accounts from schema.sql
+      if (isSupabaseConfigured) {
+        const isSeedUser = ['admin-user', 'daniel-trader', 'alice-trader', 'bob-swing', 'charlie-gold', 'elena-pips'].includes(p.user_id);
+        const isSeedAccount = p.trader_account_id.startsWith('a1111111-') ||
+          p.trader_account_id.startsWith('a2222222-') ||
+          p.trader_account_id.startsWith('a3333333-') ||
+          p.trader_account_id.startsWith('a4444444-') ||
+          p.trader_account_id.startsWith('a5555555-');
+        if (isSeedUser || isSeedAccount) {
+          return false;
+        }
+      }
+
+      return true;
+    })
+    // Ensure equity & pnl_pct read the synced values from competition_participants / trader_accounts
+    .map((p) => {
+      const liveEquity = p.current_equity !== undefined ? p.current_equity : (p.account?.current_equity ?? p.starting_balance);
+      const startBal = p.starting_balance > 0 ? p.starting_balance : 10000;
+      const livePnlPct = p.pnl_pct !== undefined ? p.pnl_pct : Number((((liveEquity - startBal) / startBal) * 100).toFixed(2));
+      return {
+        ...p,
+        current_equity: liveEquity,
+        pnl_pct: livePnlPct
+      };
+    })
     // Sort by ROI % descending, disqualified traders are placed at the bottom
     .sort((a, b) => {
       if (a.status === 'disqualified' && b.status !== 'disqualified') return 1;

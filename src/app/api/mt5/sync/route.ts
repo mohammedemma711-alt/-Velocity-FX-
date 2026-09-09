@@ -1,6 +1,23 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { MetaApiAdapter } from '../../../lib/metaApiAdapter';
 import { supabase } from '../../../lib/supabase';
+
+function getSupabaseClient(request: Request) {
+  const authHeader = request.headers.get('authorization') || request.headers.get('Authorization');
+  const cookieHeader = request.headers.get('cookie') || '';
+  const token = authHeader?.replace(/^Bearer\s+/i, '') || cookieHeader.match(/sb-access-token=([^;]+)/)?.[1];
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+  if (token && supabaseUrl && supabaseAnonKey) {
+    return createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    });
+  }
+  return supabase;
+}
 
 // Validate server name format
 function validateBrokerServer(server: string): { valid: boolean; error?: string } {
@@ -96,8 +113,9 @@ export async function POST(request: Request) {
       );
 
       if (isSupabaseConfigured && accountId) {
+        const dbClient = getSupabaseClient(request);
         // Update database records
-        await supabase
+        await dbClient
           .from('trader_accounts')
           .update({
             current_equity: liveState.equity,
@@ -107,7 +125,7 @@ export async function POST(request: Request) {
           .eq('id', accountId);
 
         // Update participant records associated with this account
-        const { data: participants } = await supabase
+        const { data: participants } = await dbClient
           .from('competition_participants')
           .select('id, starting_balance, competition_id')
           .eq('trader_account_id', accountId);
@@ -117,7 +135,7 @@ export async function POST(request: Request) {
             const startBal = Number(p.starting_balance) || 10000;
             const pnlPct = Number((((liveState.equity - startBal) / startBal) * 100).toFixed(2));
             
-            await supabase
+            await dbClient
               .from('competition_participants')
               .update({
                 current_equity: liveState.equity,
@@ -145,7 +163,8 @@ export async function POST(request: Request) {
       let syncedCount = 0;
 
       if (isSupabaseConfigured) {
-        const { data: accounts } = await supabase
+        const dbClient = getSupabaseClient(request);
+        const { data: accounts } = await dbClient
           .from('trader_accounts')
           .select('id, account_number, broker_server, status')
           .eq('status', 'active');
@@ -154,7 +173,7 @@ export async function POST(request: Request) {
           for (const acc of accounts) {
             try {
               const state = await MetaApiAdapter.fetchAccountState(acc.account_number, acc.broker_server);
-              await supabase
+              await dbClient
                 .from('trader_accounts')
                 .update({
                   current_equity: state.equity,
@@ -163,7 +182,7 @@ export async function POST(request: Request) {
                 })
                 .eq('id', acc.id);
 
-              const { data: parts } = await supabase
+              const { data: parts } = await dbClient
                 .from('competition_participants')
                 .select('id, starting_balance')
                 .eq('trader_account_id', acc.id);
@@ -172,7 +191,7 @@ export async function POST(request: Request) {
                 for (const p of parts) {
                   const startBal = Number(p.starting_balance) || 10000;
                   const pnlPct = Number((((state.equity - startBal) / startBal) * 100).toFixed(2));
-                  await supabase
+                  await dbClient
                     .from('competition_participants')
                     .update({ current_equity: state.equity, pnl_pct: pnlPct })
                     .eq('id', p.id);
@@ -221,24 +240,45 @@ export async function GET(request: Request) {
 
     let syncedCount = 0;
     if (isSupabaseConfigured) {
-      const { data: accounts } = await supabase
+      const dbClient = getSupabaseClient(request);
+      const { data: accounts } = await dbClient
         .from('trader_accounts')
         .select('id, account_number, broker_server, status')
         .eq('status', 'active');
 
       if (accounts) {
         for (const acc of accounts) {
-          const state = await MetaApiAdapter.fetchAccountState(acc.account_number, acc.broker_server);
-          await supabase
-            .from('trader_accounts')
-            .update({
-              current_equity: state.equity,
-              floating_pnl: state.floatingPnL,
-              max_recorded_drawdown: state.maxDrawdown
-            })
-            .eq('id', acc.id);
+          try {
+            const state = await MetaApiAdapter.fetchAccountState(acc.account_number, acc.broker_server);
+            await dbClient
+              .from('trader_accounts')
+              .update({
+                current_equity: state.equity,
+                floating_pnl: state.floatingPnL,
+                max_recorded_drawdown: state.maxDrawdown
+              })
+              .eq('id', acc.id);
 
-          syncedCount++;
+            const { data: parts } = await dbClient
+              .from('competition_participants')
+              .select('id, starting_balance')
+              .eq('trader_account_id', acc.id);
+
+            if (parts) {
+              for (const p of parts) {
+                const startBal = Number(p.starting_balance) || 10000;
+                const pnlPct = Number((((state.equity - startBal) / startBal) * 100).toFixed(2));
+                await dbClient
+                  .from('competition_participants')
+                  .update({ current_equity: state.equity, pnl_pct: pnlPct })
+                  .eq('id', p.id);
+              }
+            }
+
+            syncedCount++;
+          } catch (syncErr) {
+            console.warn(`Cron sync error for account ${acc.account_number}:`, syncErr);
+          }
         }
       }
     }

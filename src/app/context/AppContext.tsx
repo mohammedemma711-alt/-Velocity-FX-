@@ -60,13 +60,21 @@ export interface Participant {
   joined_at?: string;
   // Joined fields for display
   user?: {
+    id?: string;
     name: string;
     avatar: string;
     country: string;
+    email?: string;
   };
   account?: {
+    id?: string;
     account_number: string;
     broker_server: string;
+    current_equity?: number;
+    floating_pnl?: number;
+    max_recorded_drawdown?: number;
+    initial_equity?: number;
+    status?: string;
   };
 }
 
@@ -118,6 +126,7 @@ interface AppContextType {
     brokerServer: string
   ) => Promise<{ success: boolean; error?: string }>;
   isLoading: boolean;
+  isSupabaseConfigured: boolean;
   // Supabase Auth extensions
   session: Session | null;
   user: User | null;
@@ -370,8 +379,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           .from('competition_participants')
           .select(`
             *,
-            user:users (name, avatar, country),
-            account:trader_accounts (account_number, broker_server)
+            user:users (id, name, avatar, country, email),
+            account:trader_accounts (id, account_number, broker_server, current_equity, floating_pnl, max_recorded_drawdown, initial_equity, status)
           `);
 
         if (compErr || accErr || tradeErr || partErr) {
@@ -404,28 +413,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
 
+    const reloadParticipants = async () => {
+      const { data: dbParts } = await supabase
+        .from('competition_participants')
+        .select(`
+          *,
+          user:users (id, name, avatar, country, email),
+          account:trader_accounts (id, account_number, broker_server, current_equity, floating_pnl, max_recorded_drawdown, initial_equity, status)
+        `);
+      if (dbParts) setParticipants(dbParts as unknown as Participant[]);
+    };
+
     // Listen to changes in participants and accounts to instantly reflect standings
     const participantSubscription = supabase
       .channel('public:competition_participants')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'competition_participants' }, async () => {
-        // Re-query database to fetch joined user relations correctly
-        const { data: dbParts } = await supabase
-          .from('competition_participants')
-          .select(`
-            *,
-            user:users (name, avatar, country),
-            account:trader_accounts (account_number, broker_server)
-          `);
-        if (dbParts) setParticipants(dbParts as unknown as Participant[]);
+        await reloadParticipants();
       })
       .subscribe();
 
     const accountSubscription = supabase
       .channel('public:trader_accounts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'trader_accounts' }, () => {
-        supabase.from('trader_accounts').select('*').then(({ data }) => {
-          if (data) setTraderAccounts(data);
-        });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trader_accounts' }, async () => {
+        const { data: accs } = await supabase.from('trader_accounts').select('*');
+        if (accs) setTraderAccounts(accs);
+        await reloadParticipants();
       })
       .subscribe();
 
@@ -455,8 +467,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [isSupabaseConfigured]);
 
-  // Live MT5 Account Sync Poll loop (Runs every 4 seconds)
-  // Keeps leaderboard standings dynamic and simulated drifting realistic
+  // In mock fallback mode ONLY (when Supabase is NOT configured),
+  // simulate slight price drift in-memory for testing without mutating any database
   const traderAccountsRef = useRef<TraderAccount[]>([]);
   useEffect(() => {
     traderAccountsRef.current = traderAccounts;
@@ -468,8 +480,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [participants]);
 
   useEffect(() => {
+    if (isSupabaseConfigured) return;
+
     const liveUpdateInterval = setInterval(async () => {
-      // Loop over active trader accounts, fetch live pricing and performance from adapter
       const currentAccounts = traderAccountsRef.current;
       const currentParticipants = participantsRef.current;
 
@@ -479,34 +492,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentAccounts.map(async (acc) => {
           if (acc.status === 'disqualified') return acc;
           const liveState = await MetaApiAdapter.fetchAccountState(acc.account_number, acc.broker_server);
-          
-          // Check if drawdown breach happened
-          let status: 'active' | 'disqualified' = acc.status;
-          let disqualification_reason = acc.disqualification_reason;
-
-          // Find if this account is in any active competition to test drawdown breach
-          const registeredComps = currentParticipants.filter(p => p.trader_account_id === acc.id);
-          for (const reg of registeredComps) {
-            const comp = competitions.find(c => c.id === reg.competition_id);
-            if (comp && liveState.maxDrawdown > comp.max_drawdown) {
-              status = 'disqualified';
-              disqualification_reason = `Drawdown limit of ${comp.max_drawdown}% breached (Max recorded: ${liveState.maxDrawdown}%)`;
-              break;
-            }
-          }
-
           return {
             ...acc,
             current_equity: liveState.equity,
             floating_pnl: liveState.floatingPnL,
-            max_recorded_drawdown: liveState.maxDrawdown,
-            status,
-            disqualification_reason
+            max_recorded_drawdown: liveState.maxDrawdown
           };
         })
       );
 
-      // Map participant rows with new equities and ROI
       const updatedParticipants = currentParticipants.map(part => {
         const acc = updatedAccounts.find(a => a.id === part.trader_account_id);
         if (!acc) return part;
@@ -518,63 +512,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return {
           ...part,
           current_equity: acc.current_equity,
-          pnl_pct: roi,
-          status: acc.status,
-          disqualification_reason: acc.disqualification_reason
+          pnl_pct: roi
         };
       });
 
-      // Fetch dynamic live positions/trades for open trades displays
-      const updatedTrades = await Promise.all(
-        trades.map(async (t) => {
-          if (t.status !== 'open') return t;
-          const acc = currentAccounts.find(a => a.id === t.trader_account_id);
-          if (!acc) return t;
-
-          const liveTrades = await MetaApiAdapter.fetchTradeLog(acc.account_number, acc.broker_server);
-          const activeLiveTrade = liveTrades.find(lt => lt.symbol === t.symbol && lt.status === 'open');
-          
-          if (activeLiveTrade) {
-            return {
-              ...t,
-              profit: activeLiveTrade.profit,
-              pips: activeLiveTrade.pips
-            };
-          }
-          return t;
-        })
-      );
-
-      // Save states
       setTraderAccounts(updatedAccounts);
       setParticipants(updatedParticipants);
-      setTrades(updatedTrades);
-
-      // Optional: Push synced states to Supabase database if connected
-      if (isSupabaseConfigured) {
-        for (const acc of updatedAccounts) {
-          await supabase.from('trader_accounts').update({
-            current_equity: acc.current_equity,
-            floating_pnl: acc.floating_pnl,
-            max_recorded_drawdown: acc.max_recorded_drawdown,
-            status: acc.status,
-            disqualification_reason: acc.disqualification_reason
-          }).eq('id', acc.id);
-        }
-
-        for (const part of updatedParticipants) {
-          await supabase.from('competition_participants').update({
-            current_equity: part.current_equity,
-            pnl_pct: part.pnl_pct,
-            status: part.status,
-            disqualification_reason: part.disqualification_reason
-          }).eq('id', part.id);
-        }
-      }
     }, 4000);
 
     return () => clearInterval(liveUpdateInterval);
-  }, [competitions, trades, isSupabaseConfigured]);
+  }, [isSupabaseConfigured]);
 
   const switchUser = (userId: string) => {
     const userProfile = SEED_USERS.find(u => u.id === userId);
@@ -608,17 +555,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     brokerServer: string,
     investorPassword: string
   ): Promise<{ success: boolean; error?: string }> => {
-    // 1. Verify MT5 Account using Adapter
-    const ver = await MetaApiAdapter.verifyConnection(accountNumber, brokerServer, investorPassword);
-    if (!ver.success) {
-      return { success: false, error: ver.error || 'Failed to authenticate MT5 credentials' };
+    // 1. Verify MT5 Account using server sync endpoint (with METAAPI_TOKEN) or local adapter
+    let baselineEquity = 10000;
+    if (isSupabaseConfigured) {
+      const verRes = await fetch('/api/mt5/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify',
+          accountNumber,
+          brokerServer,
+          investorPassword
+        })
+      });
+      const verData = await verRes.json();
+      if (!verData.success) {
+        return { success: false, error: verData.error || 'Failed to authenticate MT5 credentials' };
+      }
+      baselineEquity = verData.equity || verData.balance || 10000;
+    } else {
+      const ver = await MetaApiAdapter.verifyConnection(accountNumber, brokerServer, investorPassword);
+      if (!ver.success) {
+        return { success: false, error: ver.error || 'Failed to authenticate MT5 credentials' };
+      }
+      baselineEquity = ver.equity || ver.balance || 0;
     }
 
     // 2. Load competition min equity rule
     const comp = competitions.find(c => c.id === competitionId);
     if (!comp) return { success: false, error: 'Competition not found' };
 
-    const baselineEquity = ver.equity || ver.balance || 0;
     if (baselineEquity < comp.min_equity) {
       return {
         success: false,
@@ -764,9 +730,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     brokerServer: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch('/api/mt5/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           action: 'sync_account',
           accountId,
@@ -778,6 +749,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const data = await response.json();
       if (!data.success) {
         return { success: false, error: data.error || 'Failed to sync MT5 account' };
+      }
+
+      // Optimistically update React state
+      if (data.state) {
+        setTraderAccounts(prev =>
+          prev.map(a =>
+            a.id === accountId
+              ? {
+                  ...a,
+                  current_equity: data.state.equity,
+                  floating_pnl: data.state.floatingPnL,
+                  max_recorded_drawdown: data.state.maxDrawdown
+                }
+              : a
+          )
+        );
+
+        setParticipants(prev =>
+          prev.map(p => {
+            if (p.trader_account_id === accountId) {
+              const startBal = p.starting_balance > 0 ? p.starting_balance : 10000;
+              const roi = Number((((data.state.equity - startBal) / startBal) * 100).toFixed(2));
+              return {
+                ...p,
+                current_equity: data.state.equity,
+                pnl_pct: roi,
+                total_trades: data.tradesCount ?? p.total_trades
+              };
+            }
+            return p;
+          })
+        );
+      }
+
+      // If user is authenticated in Supabase, also write to Supabase directly from authenticated client
+      if (isSupabaseConfigured && data.state) {
+        await supabase
+          .from('trader_accounts')
+          .update({
+            current_equity: data.state.equity,
+            floating_pnl: data.state.floatingPnL,
+            max_recorded_drawdown: data.state.maxDrawdown
+          })
+          .eq('id', accountId);
+
+        const { data: userParts } = await supabase
+          .from('competition_participants')
+          .select('id, starting_balance')
+          .eq('trader_account_id', accountId);
+
+        if (userParts) {
+          for (const up of userParts) {
+            const sBal = Number(up.starting_balance) || 10000;
+            const rRoi = Number((((data.state.equity - sBal) / sBal) * 100).toFixed(2));
+            await supabase
+              .from('competition_participants')
+              .update({
+                current_equity: data.state.equity,
+                pnl_pct: rRoi,
+                total_trades: data.tradesCount ?? 0
+              })
+              .eq('id', up.id);
+          }
+        }
       }
 
       await loadData();
@@ -958,6 +993,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         disqualifyParticipant,
         syncAccount,
         isLoading,
+        isSupabaseConfigured,
         session,
         user,
         isAuthenticated,

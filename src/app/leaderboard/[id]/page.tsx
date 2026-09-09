@@ -19,6 +19,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
     currentUser,
     competitions,
     participants,
+    traderAccounts,
     trades,
     isLoading,
     isSupabaseConfigured
@@ -47,30 +48,29 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  // Get participants of current active competition with verified, connected MT5 accounts
+  // Get participants of current active competition (or all active competitions when All Standings is selected)
   const currentParticipants = participants
     .filter((p) => {
-      // 1. Must belong to the active competition
-      if (p.competition_id !== activeComp.id) return false;
-
-      // 2. Must have a genuine linked MT5 account
-      if (!p.trader_account_id || !p.account || !p.account.account_number || !p.account.broker_server) {
+      // 1. Timeframe / Competition filter
+      if (timeframeFilter !== 'all' && p.competition_id !== activeComp.id) {
         return false;
       }
 
-      // 3. Must be active or disqualified
+      // 2. Validate participant status
       if (p.status !== 'active' && p.status !== 'disqualified') {
         return false;
       }
 
-      // 4. In live Supabase database mode, filter out leftover seed/test accounts from schema.sql
+      // 3. In live Supabase database mode, filter out leftover seed/test accounts from schema.sql
       if (isSupabaseConfigured) {
         const isSeedUser = ['admin-user', 'daniel-trader', 'alice-trader', 'bob-swing', 'charlie-gold', 'elena-pips'].includes(p.user_id);
-        const isSeedAccount = p.trader_account_id.startsWith('a1111111-') ||
+        const isSeedAccount = !!p.trader_account_id && (
+          p.trader_account_id.startsWith('a1111111-') ||
           p.trader_account_id.startsWith('a2222222-') ||
           p.trader_account_id.startsWith('a3333333-') ||
           p.trader_account_id.startsWith('a4444444-') ||
-          p.trader_account_id.startsWith('a5555555-');
+          p.trader_account_id.startsWith('a5555555-')
+        );
         if (isSeedUser || isSeedAccount) {
           return false;
         }
@@ -78,13 +78,15 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
 
       return true;
     })
-    // Ensure equity & pnl_pct read the synced values from competition_participants / trader_accounts
+    // Ensure account, user, equity & pnl_pct read accurately from synced records
     .map((p) => {
-      const liveEquity = p.current_equity !== undefined ? p.current_equity : (p.account?.current_equity ?? p.starting_balance);
-      const startBal = p.starting_balance > 0 ? p.starting_balance : 10000;
+      const account = p.account || traderAccounts?.find((a) => a.id === p.trader_account_id);
+      const liveEquity = p.current_equity !== undefined ? p.current_equity : (account?.current_equity ?? p.starting_balance);
+      const startBal = p.starting_balance > 0 ? p.starting_balance : (account?.initial_equity ?? 10000);
       const livePnlPct = p.pnl_pct !== undefined ? p.pnl_pct : Number((((liveEquity - startBal) / startBal) * 100).toFixed(2));
       return {
         ...p,
+        account: account || p.account,
         current_equity: liveEquity,
         pnl_pct: livePnlPct
       };
@@ -127,7 +129,10 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
   // Timeframe filter handler - Switch competitions corresponding to timeframe
   const handleTimeframeChange = (filter: 'all' | 'daily' | 'monthly' | 'yearly') => {
     setTimeframeFilter(filter);
-    if (filter === 'all') return;
+    if (filter === 'all') {
+      setSelectedCompId(null);
+      return;
+    }
     
     // Find first competition matching the chosen timeframe category
     const matchingComp = competitions.find(c => c.category === filter);
